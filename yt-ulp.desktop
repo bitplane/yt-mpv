@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=YouTube ULP (MPV Player & Archiver)
+Comment=Play videos in mpv and archive to Internet Archive
+Type=Application
+Exec=yt-ulp-launcher %u
+Terminal=false
+Categories=Network;Video;
+MimeType=x-scheme-handler/x-yt-ulp;x-scheme-handler/x-yt-ulps;
+# No Icon provided (can add an icon path here if desired)
