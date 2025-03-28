@@ -101,6 +101,14 @@ def download_video(url: str) -> Optional[Tuple[Path, Path]]:
     # Ensure download directory exists
     DL_DIR.mkdir(parents=True, exist_ok=True)
 
+    # Extract video ID from URL (assuming YouTube, but could be expanded)
+    video_id = url.split("v=")[-1].split("&")[0]
+    extractor = "youtube"  # Could detect this from URL if needed
+
+    # Define expected output paths
+    info_file = DL_DIR / f"yt-mpv-{extractor}-{video_id}.info.json"
+    video_file = DL_DIR / f"yt-mpv-{extractor}-{video_id}.mp4"
+
     # Use yt-dlp to download the video
     status, stdout, stderr = run_command(
         [
@@ -123,43 +131,17 @@ def download_video(url: str) -> Optional[Tuple[Path, Path]]:
         notify("Download failed")
         return None
 
-    # Find the downloaded files
-    info_files = list(DL_DIR.glob("yt-mpv-*-*.info.json"))
-    logger.info(f"Found {len(info_files)} info files: {info_files}")
-
-    if not info_files:
-        logger.error("No info file found after download")
-        notify("Download appears incomplete - no info file")
+    # Simple check if files exist after download
+    if not info_file.exists():
+        logger.error(f"Info file not found at expected path: {info_file}")
+        notify("Download appears incomplete - info file missing")
         return None
 
-    # Sort by modification time to get the most recent
-    info_file = sorted(info_files, key=lambda p: p.stat().st_mtime, reverse=True)[0]
-    logger.info(f"Using most recent info file: {info_file}")
-
-    # Try multiple approaches to find the video file
-    video_file = info_file.with_suffix("")  # Remove .info.json suffix
-
     if not video_file.exists():
-        logger.info(f"Video file not at {video_file}, searching for alternatives")
-        # List all files in the directory to help with debugging
-        all_files = list(DL_DIR.glob("*"))
-        logger.info(f"All files in directory: {all_files}")
+        logger.error(f"Video file not found at expected path: {video_file}")
+        notify("Download appears incomplete - video file missing")
+        return None
 
-        # Try to find the video file with any extension
-        possible_video_files = list(DL_DIR.glob(f"{video_file.name}.*"))
-        logger.info(f"Possible video files: {possible_video_files}")
-
-        video_file = next(
-            (f for f in possible_video_files if f.suffix != ".json"),
-            None,
-        )
-
-        if not video_file:
-            logger.error("Video file not found after download")
-            notify("Download appears incomplete - video file missing")
-            return None
-
-    logger.info(f"Found video file: {video_file}")
     return video_file, info_file
 
 
