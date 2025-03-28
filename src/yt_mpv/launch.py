@@ -23,7 +23,7 @@ logger = logging.getLogger("yt-mpv")
 
 # Constants - consistent naming throughout
 HOME = Path.home()
-DL_DIR = HOME / ".local/share/yt-mpv"
+DL_DIR = HOME / ".cache/yt-mpv"
 VENV_DIR = Path(os.environ.get("YT_MPV_VENV", HOME / ".local/share/yt-mpv/.venv"))
 VENV_BIN = VENV_DIR / "bin"
 
@@ -125,6 +125,8 @@ def download_video(url: str) -> Optional[Tuple[Path, Path]]:
 
     # Find the downloaded files
     info_files = list(DL_DIR.glob("yt-mpv-*-*.info.json"))
+    logger.info(f"Found {len(info_files)} info files: {info_files}")
+
     if not info_files:
         logger.error("No info file found after download")
         notify("Download appears incomplete - no info file")
@@ -132,22 +134,32 @@ def download_video(url: str) -> Optional[Tuple[Path, Path]]:
 
     # Sort by modification time to get the most recent
     info_file = sorted(info_files, key=lambda p: p.stat().st_mtime, reverse=True)[0]
+    logger.info(f"Using most recent info file: {info_file}")
+
+    # Try multiple approaches to find the video file
     video_file = info_file.with_suffix("")  # Remove .info.json suffix
 
     if not video_file.exists():
+        logger.info(f"Video file not at {video_file}, searching for alternatives")
+        # List all files in the directory to help with debugging
+        all_files = list(DL_DIR.glob("*"))
+        logger.info(f"All files in directory: {all_files}")
+
+        # Try to find the video file with any extension
+        possible_video_files = list(DL_DIR.glob(f"{video_file.name}.*"))
+        logger.info(f"Possible video files: {possible_video_files}")
+
         video_file = next(
-            (
-                f
-                for f in video_file.parent.glob(f"{video_file.name}.*")
-                if f.suffix != ".json"
-            ),
+            (f for f in possible_video_files if f.suffix != ".json"),
             None,
         )
+
         if not video_file:
             logger.error("Video file not found after download")
             notify("Download appears incomplete - video file missing")
             return None
 
+    logger.info(f"Found video file: {video_file}")
     return video_file, info_file
 
 
