@@ -177,7 +177,8 @@ def upload_to_archive(video_file: Path, info_file: Path, url: str) -> bool:
         # Check if item already exists
         try:
             search = internetarchive.search_items(f"identifier:{identifier}")
-            exists = next(search, None) is not None
+            results = list(search)
+            exists = len(results) > 0
         except Exception as e:
             logger.warning(f"Archive.org search failed: {e}")
             exists = False
