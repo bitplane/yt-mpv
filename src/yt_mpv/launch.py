@@ -1,7 +1,5 @@
-#!/usr/bin/env python3
 """
-Launcher for x-yt-ulp:// URL
-Plays video with mpv, then uploads to Internet Archive.
+Launcher for yt-mpv: Play videos with mpv, then upload to Internet Archive.
 """
 
 import hashlib
@@ -21,12 +19,12 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
-logger = logging.getLogger("yt-ulp")
+logger = logging.getLogger("yt-mpv")
 
-# Constants
+# Constants - updated for new paths and naming
 HOME = Path.home()
-DL_DIR = HOME / ".local/share/yt-ulp"
-VENV_DIR = DL_DIR / "venv"
+DL_DIR = HOME / ".local/share/yt-mpv"  # Changed from yt-ulp to yt-mpv
+VENV_DIR = Path(os.environ.get("YT_MPV_VENV", HOME / ".local/share/yt-mpv/.venv"))
 VENV_BIN = VENV_DIR / "bin"
 
 
@@ -34,7 +32,7 @@ def notify(message: str) -> None:
     """Send desktop notification if possible."""
     try:
         subprocess.run(
-            ["notify-send", "YouTube ULP", message], check=False, capture_output=True
+            ["notify-send", "YouTube MPV", message], check=False, capture_output=True
         )
     except (subprocess.SubprocessError, FileNotFoundError):
         # If notification fails, just log it
@@ -42,11 +40,11 @@ def notify(message: str) -> None:
 
 
 def get_real_url(raw_url: str) -> str:
-    """Convert x-yt-ulp custom scheme to regular http/https URL."""
-    if raw_url.startswith("x-yt-ulps:"):
-        return raw_url.replace("x-yt-ulps:", "https:", 1)
-    elif raw_url.startswith("x-yt-ulp:"):
-        return raw_url.replace("x-yt-ulp:", "http:", 1)
+    """Convert custom scheme to regular http/https URL."""
+    if raw_url.startswith("x-yt-mpvs:"):  # Changed from yt-ulps to yt-mpvs
+        return raw_url.replace("x-yt-mpvs:", "https:", 1)
+    elif raw_url.startswith("x-yt-mpv:"):  # Changed from yt-ulp to yt-mpv
+        return raw_url.replace("x-yt-mpv:", "http:", 1)
     return raw_url
 
 
@@ -61,7 +59,7 @@ def check_dependencies() -> bool:
     # Check for Python venv
     if not os.path.isfile(os.path.join(VENV_BIN, "activate")):
         logger.error(f"Python venv not found at {VENV_DIR}")
-        notify("Python venv missing: run install.sh")
+        notify("Python venv missing: run 'yt-mpv install'")
         return False
 
     return True
@@ -111,7 +109,7 @@ def download_video(url: str) -> Optional[Tuple[Path, Path]]:
             "mp4",
             "--write-info-json",
             "-o",
-            f"{DL_DIR}/yt-ulp-%(extractor)s-%(id)s.%(ext)s",
+            f"{DL_DIR}/yt-mpv-%(extractor)s-%(id)s.%(ext)s",  # Changed prefix from yt-ulp to yt-mpv
             url,
         ],
         desc="Downloading video for archiving",
@@ -124,7 +122,7 @@ def download_video(url: str) -> Optional[Tuple[Path, Path]]:
         return None
 
     # Find the downloaded files
-    info_files = list(DL_DIR.glob("yt-ulp-*-*.info.json"))
+    info_files = list(DL_DIR.glob("yt-mpv-*-*.info.json"))  # Changed glob pattern
     if not info_files:
         logger.error("No info file found after download")
         notify("Download appears incomplete - no info file")
@@ -152,9 +150,12 @@ def download_video(url: str) -> Optional[Tuple[Path, Path]]:
 
 
 def generate_archive_id(url: str, username: str) -> str:
-    """Generate a unique Archive.org identifier for this video."""
+    """Generate a unique Archive.org identifier for this video.
+
+    Make sure this matches the ID generation in checker.py
+    """
     url_hash = hashlib.sha1(url.encode()).hexdigest()[:8]
-    return f"yt-ulp-{username}-{url_hash}"
+    return f"yt-mpv-{username}-{url_hash}"  # Changed prefix from yt-ulp to yt-mpv
 
 
 def upload_to_archive(video_file: Path, info_file: Path, url: str) -> bool:
@@ -228,12 +229,32 @@ def upload_to_archive(video_file: Path, info_file: Path, url: str) -> bool:
 
     except ImportError:
         logger.error("internetarchive module not available")
-        notify("internetarchive module missing - run install.sh")
+        notify("internetarchive module missing - run 'yt-mpv install'")
         return False
     except Exception as e:
         logger.error(f"Upload error: {e}")
         notify(f"Upload failed: {str(e)}")
         return False
+
+
+def update_yt_dlp():
+    """Update yt-dlp using uv if available."""
+    try:
+        # First try to use uv
+        if shutil.which("uv"):
+            logger.info("Updating yt-dlp using uv")
+            cmd = ["uv", "pip", "install", "--upgrade", "yt-dlp"]
+            env = os.environ.copy()
+            env["VIRTUAL_ENV"] = str(VENV_DIR)
+            env["PATH"] = f"{VENV_BIN}:{env['PATH']}"
+            run_command(cmd, env=env, check=False)
+        else:
+            # Fall back to pip
+            logger.info("Updating yt-dlp using pip")
+            cmd = [str(VENV_BIN / "pip"), "install", "--upgrade", "yt-dlp"]
+            run_command(cmd, check=False)
+    except Exception as e:
+        logger.warning(f"Failed to update yt-dlp: {e}")
 
 
 def main():
@@ -257,10 +278,8 @@ def main():
     if not check_dependencies():
         sys.exit(1)
 
-    # Try to update yt-dlp to avoid YouTube API changes breaking functionality
-    run_command(
-        ["pip", "install", "--upgrade", "yt-dlp"], desc="Updating yt-dlp", check=False
-    )
+    # Update yt-dlp to avoid YouTube API changes breaking functionality
+    update_yt_dlp()
 
     # Play the video
     if not play_video(url):
