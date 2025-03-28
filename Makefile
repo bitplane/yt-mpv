@@ -1,5 +1,5 @@
 # the things that don't have output files or run every time
-.PHONY: help all install test dev coverage clean \
+.PHONY: help all test dev coverage clean \
 		pre-commit update-pre-commit
 
 
@@ -7,8 +7,6 @@ PROJECT_NAME := mpv-ulp
 
 
 all: dev coverage  ## builds everything
-
-install: .venv/.installed  ## installs the venv and the project packages
 
 dev: .venv/.installed-dev pre-commit  ## prepare local repo and venv for dev
 
