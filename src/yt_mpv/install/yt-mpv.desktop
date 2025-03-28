@@ -5,5 +5,5 @@ Type=Application
 Exec=yt-ulp-launcher %u
 Terminal=false
 Categories=Network;Video;
-MimeType=x-scheme-handler/x-yt-ulp;x-scheme-handler/x-yt-ulps;
+MimeType=x-scheme-handler/x-yt-mpv;x-scheme-handler/x-yt-mpv;
 # No Icon provided (can add an icon path here if desired)
