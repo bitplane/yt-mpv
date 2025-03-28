@@ -83,7 +83,7 @@ def run_command(
 def play_video(url: str) -> bool:
     """Play the video with mpv and return success status."""
     status, _, stderr = run_command(
-        ["mpv", "--ytdl=no", url, f"--term-status-msg=Playing: {url}"],
+        ["mpv", "--ytdl=yes", url, f"--term-status-msg=Playing: {url}"],
         desc=f"Playing {url} with mpv",
         check=False,
     )
