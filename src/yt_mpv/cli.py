@@ -4,11 +4,28 @@ Command-line interface for yt-mpv
 """
 
 import argparse
+import logging
+import os
 import sys
+from pathlib import Path
 
 from yt_mpv.cache import clean_all_cache, format_cache_info, purge_cache
 from yt_mpv.checker import check_archive_status
 from yt_mpv.installer import Installer
+
+# Constants
+HOME = Path.home()
+DL_DIR = HOME / ".cache/yt-mpv"
+VENV_DIR = Path(os.environ.get("YT_MPV_VENV", HOME / ".local/share/yt-mpv/.venv"))
+VENV_BIN = VENV_DIR / "bin"
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+logger = logging.getLogger("yt-mpv")
 
 
 def main():
@@ -36,9 +53,31 @@ def main():
         "--prefix", help="Installation prefix (default: $HOME/.local)"
     )
 
-    # Launch command
-    launch_parser = subparsers.add_parser("launch", help="Launch video player")
-    launch_parser.add_argument("url", help="URL to play")
+    # Launch command (combined play and archive)
+    launch_parser = subparsers.add_parser(
+        "launch", help="Launch video player and archive"
+    )
+    launch_parser.add_argument("url", help="URL to play and archive")
+
+    # Play command (playback only)
+    play_parser = subparsers.add_parser("play", help="Play video without archiving")
+    play_parser.add_argument("url", help="URL to play")
+    play_parser.add_argument(
+        "--update-ytdlp", action="store_true", help="Update yt-dlp before playing"
+    )
+    play_parser.add_argument(
+        "--mpv-args",
+        help="Additional arguments to pass to mpv (quote and separate with spaces)",
+    )
+
+    # Archive command (archiving only)
+    archive_parser = subparsers.add_parser(
+        "archive", help="Archive video without playing"
+    )
+    archive_parser.add_argument("url", help="URL to archive")
+    archive_parser.add_argument(
+        "--update-ytdlp", action="store_true", help="Update yt-dlp before archiving"
+    )
 
     # Check command
     check_parser = subparsers.add_parser("check", help="Check if URL is archived")
@@ -103,12 +142,39 @@ def main():
         sys.argv = [sys.argv[0], args.url]
         launch_main()
 
+    elif args.command == "play":
+        from yt_mpv.play import play_video, update_yt_dlp
+
+        # Update yt-dlp if requested
+        if args.update_ytdlp:
+            update_yt_dlp(VENV_DIR, VENV_BIN)
+
+        # Parse additional MPV args if provided
+        mpv_args = args.mpv_args.split() if args.mpv_args else []
+
+        # Play the video
+        success = play_video(args.url, mpv_args)
+        sys.exit(0 if success else 1)
+
+    elif args.command == "archive":
+        from yt_mpv.archive import archive_url
+        from yt_mpv.play import update_yt_dlp
+
+        # Update yt-dlp if requested
+        if args.update_ytdlp:
+            update_yt_dlp(VENV_DIR, VENV_BIN)
+
+        # Archive the URL
+        success = archive_url(args.url, DL_DIR, VENV_BIN)
+        sys.exit(0 if success else 1)
+
     elif args.command == "check":
         result = check_archive_status(args.url)
         if result:
             print(result)
             sys.exit(0)
         else:
+            print("URL not found in archive.org", file=sys.stderr)
             sys.exit(1)
 
     elif args.command == "cache":
