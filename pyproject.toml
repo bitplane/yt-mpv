@@ -18,7 +18,9 @@ dev = [
     "pre-commit",
     "pytest",
     "coverage",
-    "pytest-cov"
+    "pytest-cov",
+    "build",
+    "twine"
 ]
 
 # Add CLI entry point
