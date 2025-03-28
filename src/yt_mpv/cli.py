@@ -6,6 +6,7 @@ Command-line interface for yt-mpv
 import argparse
 import sys
 
+from yt_mpv.cache import clean_all_cache, format_cache_info, purge_cache
 from yt_mpv.checker import check_archive_status
 from yt_mpv.installer import Installer
 
@@ -42,6 +43,27 @@ def main():
     # Check command
     check_parser = subparsers.add_parser("check", help="Check if URL is archived")
     check_parser.add_argument("url", help="URL to check")
+
+    # Cache management commands
+    cache_parser = subparsers.add_parser("cache", help="Manage cache files")
+    cache_subparsers = cache_parser.add_subparsers(
+        dest="cache_command", help="Cache command to run"
+    )
+
+    # Cache info command
+    cache_subparsers.add_parser("info", help="Show cache information")
+
+    # Cache clean command
+    cache_clean_parser = cache_subparsers.add_parser("clean", help="Clean cache files")
+    cache_clean_parser.add_argument(
+        "--days",
+        type=int,
+        default=7,
+        help="Remove files older than this many days (default: 7)",
+    )
+    cache_clean_parser.add_argument(
+        "--all", action="store_true", help="Remove all cache files"
+    )
 
     args = parser.parse_args()
 
@@ -87,6 +109,35 @@ def main():
             print(result)
             sys.exit(0)
         else:
+            sys.exit(1)
+
+    elif args.command == "cache":
+        if args.cache_command == "info":
+            # Show cache information using the formatted output
+            print(format_cache_info())
+
+        elif args.cache_command == "clean":
+            if args.all:
+                # Remove all files using the dedicated function
+                files_deleted, bytes_freed = clean_all_cache()
+                if files_deleted > 0:
+                    print(
+                        f"Removed all {files_deleted} files ({bytes_freed / 1048576:.2f} MB)"
+                    )
+                else:
+                    print("No cache files found")
+            else:
+                # Remove files older than specified days
+                files_deleted, bytes_freed = purge_cache(max_age_days=args.days)
+                if files_deleted > 0:
+                    print(
+                        f"Removed {files_deleted} files ({bytes_freed / 1048576:.2f} MB)"
+                    )
+                else:
+                    print(f"No files older than {args.days} days found")
+        else:
+            print("No cache command specified")
+            cache_parser.print_help()
             sys.exit(1)
 
     # Should never reach here

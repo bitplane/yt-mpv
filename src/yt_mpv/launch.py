@@ -13,6 +13,9 @@ import sys
 from pathlib import Path
 from typing import Optional, Tuple
 
+# Import the new cache utility functions
+from yt_mpv.cache import cleanup_cache_files, purge_cache
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -217,6 +220,13 @@ def upload_to_archive(video_file: Path, info_file: Path, url: str) -> bool:
         if success:
             logger.info("Upload succeeded")
             notify(f"Upload succeeded: {identifier}")
+
+            # Clean up cache files after successful upload
+            if cleanup_cache_files(video_file, info_file):
+                logger.info("Cache files cleaned up successfully")
+            else:
+                logger.warning("Failed to clean up some cache files")
+
             return True
         else:
             logger.error("Upload failed")
@@ -284,6 +294,16 @@ def main():
 
     # Update yt-dlp to avoid YouTube API changes breaking functionality
     update_yt_dlp()
+
+    # Occasionally clean old cache files (once every ~10 runs randomly)
+    import random
+
+    if random.random() < 0.1:
+        try:
+            # Clean files older than 30 days
+            purge_cache(max_age_days=30)
+        except Exception as e:
+            logger.warning(f"Cache cleaning failed: {e}")
 
     # Play the video
     if not play_video(url):
