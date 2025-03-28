@@ -289,7 +289,28 @@ def main():
     if not play_video(url):
         sys.exit(1)
 
-    # Download video for archiving
+    # Check if already archived before downloading
+    username = os.getlogin()
+    identifier = generate_archive_id(url, username)
+
+    # Import here to avoid unnecessary imports if playing is all we need
+    try:
+        import internetarchive
+
+        # Check if item already exists
+        item = internetarchive.get_item(identifier)
+        if item.exists:
+            logger.info(
+                f"Archive item {identifier} already exists. Skipping download and upload."
+            )
+            notify(f"Already archived as {identifier}")
+            sys.exit(0)
+    except Exception as e:
+        logger.warning(f"Archive.org check failed: {e}")
+        # Continue with download as we couldn't verify if it exists
+
+    # Only download if not already archived
+    logger.info("Video not found in archive.org. Downloading...")
     result = download_video(url)
     if not result:
         sys.exit(1)
