@@ -2,12 +2,14 @@
 Installation and setup functionality for yt-mpv
 """
 
+import os
 import shutil
 import subprocess
+import sys
 import webbrowser
+from importlib import resources
 from pathlib import Path
 
-import pkg_resources
 from freeze_one import freeze_one
 
 
@@ -41,19 +43,28 @@ class Installer:
         print(f"Installing yt-mpv to {self.prefix}...")
         self.create_dirs()
 
-        # Create virtualenv
+        # Create virtualenv using current Python interpreter
         if not (self.venv_dir / "bin" / "python").exists():
             print(f"Creating virtualenv at {self.venv_dir}")
-            self.run_command(["python3", "-m", "venv", str(self.venv_dir)])
+            self.run_command([sys.executable, "-m", "venv", str(self.venv_dir)])
 
         # Get frozen requirements
         frozen_deps = freeze_one("yt_mpv")
 
         # Install dependencies into venv
         venv_pip = self.venv_dir / "bin" / "pip"
-        self.run_command([str(venv_pip), "install", "-U", "pip"])
-        self.run_command([str(venv_pip), "install", "-U", "yt-dlp", "internetarchive"])
-        self.run_command([str(venv_pip), "install", frozen_deps])
+
+        # Setup environment to ensure we're using the venv
+        env = os.environ.copy()
+        env["VIRTUAL_ENV"] = str(self.venv_dir)
+        env["PATH"] = f"{self.venv_dir}/bin:{env.get('PATH', '')}"
+
+        # Install core dependencies
+        self.run_command([str(venv_pip), "install", "-U", "pip"], env=env)
+        self.run_command(
+            [str(venv_pip), "install", "-U", "yt-dlp", "internetarchive", "uv"], env=env
+        )
+        self.run_command([str(venv_pip), "install", frozen_deps], env=env)
 
         # Write launcher script
         self.write_launcher_script()
@@ -140,14 +151,25 @@ MimeType=x-scheme-handler/x-yt-mpv;x-scheme-handler/x-yt-mpvs;
 
     def open_bookmarklet(self):
         """Open the bookmarklet HTML in a browser."""
-        # Get bookmarklet path from package
         try:
-            bookmarklet_path = pkg_resources.resource_filename(
-                "yt_mpv", "install/bookmark.html"
-            )
+            # Try using importlib.resources first (modern approach)
+            try:
+                # For Python 3.9+
+                bookmark_path = resources.files("yt_mpv.install").joinpath(
+                    "bookmark.html"
+                )
+                bookmarklet_path = bookmark_path
+            except (AttributeError, ImportError):
+                # Fallback for earlier Python versions
+                import pkg_resources
+
+                bookmarklet_path = pkg_resources.resource_filename(
+                    "yt_mpv", "install/bookmark.html"
+                )
+
             print(f"Opening bookmarklet page at {bookmarklet_path}")
             webbrowser.open(f"file://{bookmarklet_path}")
-        except (pkg_resources.DistributionNotFound, FileNotFoundError) as e:
+        except Exception as e:
             print(f"Could not open bookmarklet HTML: {e}")
 
     def remove(self):

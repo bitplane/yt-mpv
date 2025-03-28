@@ -21,9 +21,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger("yt-mpv")
 
-# Constants - updated for new paths and naming
+# Constants - consistent naming throughout
 HOME = Path.home()
-DL_DIR = HOME / ".local/share/yt-mpv"  # Changed from yt-ulp to yt-mpv
+DL_DIR = HOME / ".local/share/yt-mpv"
 VENV_DIR = Path(os.environ.get("YT_MPV_VENV", HOME / ".local/share/yt-mpv/.venv"))
 VENV_BIN = VENV_DIR / "bin"
 
@@ -41,9 +41,9 @@ def notify(message: str) -> None:
 
 def get_real_url(raw_url: str) -> str:
     """Convert custom scheme to regular http/https URL."""
-    if raw_url.startswith("x-yt-mpvs:"):  # Changed from yt-ulps to yt-mpvs
+    if raw_url.startswith("x-yt-mpvs:"):
         return raw_url.replace("x-yt-mpvs:", "https:", 1)
-    elif raw_url.startswith("x-yt-mpv:"):  # Changed from yt-ulp to yt-mpv
+    elif raw_url.startswith("x-yt-mpv:"):
         return raw_url.replace("x-yt-mpv:", "http:", 1)
     return raw_url
 
@@ -65,13 +65,15 @@ def check_dependencies() -> bool:
     return True
 
 
-def run_command(cmd: list, desc: str = "", check: bool = True) -> Tuple[int, str, str]:
+def run_command(
+    cmd: list, desc: str = "", check: bool = True, env=None
+) -> Tuple[int, str, str]:
     """Run a command and return status, stdout, stderr."""
     try:
         if desc:
             logger.info(desc)
 
-        proc = subprocess.run(cmd, check=check, text=True, capture_output=True)
+        proc = subprocess.run(cmd, check=check, text=True, capture_output=True, env=env)
         return proc.returncode, proc.stdout, proc.stderr
     except subprocess.SubprocessError as e:
         logger.error(f"Command failed: {e}")
@@ -109,7 +111,7 @@ def download_video(url: str) -> Optional[Tuple[Path, Path]]:
             "mp4",
             "--write-info-json",
             "-o",
-            f"{DL_DIR}/yt-mpv-%(extractor)s-%(id)s.%(ext)s",  # Changed prefix from yt-ulp to yt-mpv
+            f"{DL_DIR}/yt-mpv-%(extractor)s-%(id)s.%(ext)s",
             url,
         ],
         desc="Downloading video for archiving",
@@ -122,7 +124,7 @@ def download_video(url: str) -> Optional[Tuple[Path, Path]]:
         return None
 
     # Find the downloaded files
-    info_files = list(DL_DIR.glob("yt-mpv-*-*.info.json"))  # Changed glob pattern
+    info_files = list(DL_DIR.glob("yt-mpv-*-*.info.json"))
     if not info_files:
         logger.error("No info file found after download")
         notify("Download appears incomplete - no info file")
@@ -149,13 +151,12 @@ def download_video(url: str) -> Optional[Tuple[Path, Path]]:
     return video_file, info_file
 
 
-def generate_archive_id(url: str, username: str) -> str:
-    """Generate a unique Archive.org identifier for this video.
-
-    Make sure this matches the ID generation in checker.py
-    """
+def generate_archive_id(url: str, username: str = None) -> str:
+    """Generate a unique Archive.org identifier for this video."""
+    if username is None:
+        username = os.getlogin()
     url_hash = hashlib.sha1(url.encode()).hexdigest()[:8]
-    return f"yt-mpv-{username}-{url_hash}"  # Changed prefix from yt-ulp to yt-mpv
+    return f"yt-mpv-{username}-{url_hash}"
 
 
 def upload_to_archive(video_file: Path, info_file: Path, url: str) -> bool:
@@ -240,13 +241,21 @@ def upload_to_archive(video_file: Path, info_file: Path, url: str) -> bool:
 def update_yt_dlp():
     """Update yt-dlp using uv if available."""
     try:
-        # First try to use uv
-        if shutil.which("uv"):
-            logger.info("Updating yt-dlp using uv")
+        # Prepare environment with venv
+        env = os.environ.copy()
+        env["VIRTUAL_ENV"] = str(VENV_DIR)
+        env["PATH"] = f"{VENV_BIN}:{env.get('PATH', '')}"
+
+        # First try to use uv if available in the venv
+        uv_path = VENV_BIN / "uv"
+        if uv_path.exists():
+            logger.info("Updating yt-dlp using uv in venv")
+            cmd = [str(uv_path), "pip", "install", "--upgrade", "yt-dlp"]
+            run_command(cmd, env=env, check=False)
+        # Then try system uv
+        elif shutil.which("uv"):
+            logger.info("Updating yt-dlp using system uv")
             cmd = ["uv", "pip", "install", "--upgrade", "yt-dlp"]
-            env = os.environ.copy()
-            env["VIRTUAL_ENV"] = str(VENV_DIR)
-            env["PATH"] = f"{VENV_BIN}:{env['PATH']}"
             run_command(cmd, env=env, check=False)
         else:
             # Fall back to pip

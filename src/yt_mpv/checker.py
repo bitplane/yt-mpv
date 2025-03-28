@@ -10,9 +10,17 @@ import sys
 def generate_archive_id(url, username=None):
     """Generate a unique Archive.org identifier for a video URL.
 
-    This should match the ID generation in launch.py.
+    This must match the ID generation in launch.py.
+
+    Args:
+        url: The URL to generate an ID for
+        username: Optional username, defaults to current user
+
+    Returns:
+        str: The archive identifier
     """
-    username = username or os.getlogin()
+    if username is None:
+        username = os.getlogin()
     url_hash = hashlib.sha1(url.encode()).hexdigest()[:8]
     return f"yt-mpv-{username}-{url_hash}"
 
