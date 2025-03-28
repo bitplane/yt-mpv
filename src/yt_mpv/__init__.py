@@ -1,9 +1,7 @@
-"""
-yt-mpv: Play YouTube videos in MPV while archiving to archive.org
+# yt_mpv/__init__.py
+try:
+    from importlib.metadata import version
+except ImportError:
+    from importlib_metadata import version  # backport for <3.8
 
-This package provides the tools to install, configure, and run a system
-that plays YouTube videos in MPV while simultaneously archiving them
-to archive.org for preservation.
-"""
-
-__version__ = "0.1.0"
+__version__ = version("yt-mpv")
