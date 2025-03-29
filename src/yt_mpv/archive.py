@@ -2,79 +2,22 @@
 Archive.org functionality for yt-mpv
 """
 
-import hashlib
 import json
 import logging
 import os
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
+from yt_mpv.cache import cleanup_cache_files
+from yt_mpv.utils import (
+    extract_video_id,
+    generate_archive_id,
+    notify,
+    run_command,
+)
+
 # Configure logging
 logger = logging.getLogger("yt-mpv")
-
-
-def notify(message: str) -> None:
-    """Send desktop notification if possible."""
-    try:
-        import subprocess
-
-        subprocess.run(
-            ["notify-send", "YouTube MPV", message], check=False, capture_output=True
-        )
-    except (subprocess.SubprocessError, FileNotFoundError):
-        # If notification fails, just log it
-        pass
-
-
-def generate_archive_id(url: str, username: Optional[str] = None) -> str:
-    """Generate a unique Archive.org identifier for a video URL.
-
-    Args:
-        url: The URL to generate an ID for
-        username: Optional username, defaults to current user
-
-    Returns:
-        str: The archive identifier
-    """
-    if username is None:
-        username = os.getlogin()
-    url_hash = hashlib.sha1(url.encode()).hexdigest()[:8]
-    return f"yt-mpv-{username}-{url_hash}"
-
-
-def extract_metadata(info_file: Path, url: str) -> Dict[str, Any]:
-    """Extract metadata from yt-dlp's info.json file.
-
-    Args:
-        info_file: Path to the info JSON file
-        url: Original URL for fallback
-
-    Returns:
-        dict: Metadata dictionary for archive.org
-    """
-    # Load metadata from yt-dlp's info.json
-    with open(info_file, "r") as f:
-        data = json.load(f)
-
-    # Extract metadata
-    title = data.get("title", "Untitled Video")
-    description = data.get("description") or ""
-    tags = data.get("tags") or data.get("categories") or []
-    creator = data.get("uploader") or data.get("channel") or ""
-    source = data.get("webpage_url") or url
-
-    # Prepare metadata for upload
-    metadata = {
-        "title": title,
-        "description": description,
-        "creator": creator,
-        "subject": tags,
-        "source": source,
-        "mediatype": "movies",
-        "collection": "opensource_movies",
-    }
-
-    return metadata
 
 
 def check_archive_status(url: str) -> Optional[str]:
@@ -92,7 +35,7 @@ def check_archive_status(url: str) -> Optional[str]:
         # Generate the identifier that would have been used
         identifier = generate_archive_id(url)
 
-        # Search archive.org
+        # Check if item exists
         item = internetarchive.get_item(identifier)
         if item.exists:
             return f"https://archive.org/details/{identifier}"
@@ -105,6 +48,51 @@ def check_archive_status(url: str) -> Optional[str]:
     except Exception as e:
         logger.error(f"Error checking archive: {e}")
         return None
+
+
+def extract_metadata(info_file: Path, url: str) -> Dict[str, Any]:
+    """Extract metadata from yt-dlp's info.json file.
+
+    Args:
+        info_file: Path to the info JSON file
+        url: Original URL for fallback
+
+    Returns:
+        dict: Metadata dictionary for archive.org
+    """
+    # Load metadata from yt-dlp's info.json
+    try:
+        with open(info_file, "r") as f:
+            data = json.load(f)
+
+        # Extract metadata
+        title = data.get("title", "Untitled Video")
+        description = data.get("description") or ""
+        tags = data.get("tags") or data.get("categories") or []
+        creator = data.get("uploader") or data.get("channel") or ""
+        source = data.get("webpage_url") or url
+
+        # Prepare metadata for upload
+        metadata = {
+            "title": title,
+            "description": description,
+            "creator": creator,
+            "subject": tags,
+            "source": source,
+            "mediatype": "movies",
+            "collection": "opensource_movies",
+        }
+
+        return metadata
+    except Exception as e:
+        logger.error(f"Error extracting metadata: {e}")
+        # Return minimal metadata if extraction fails
+        return {
+            "title": "Unknown Video",
+            "source": url,
+            "mediatype": "movies",
+            "collection": "opensource_movies",
+        }
 
 
 def upload_to_archive(video_file: Path, info_file: Path, url: str) -> bool:
@@ -182,14 +170,11 @@ def download_video(
     Returns:
         Tuple[Path, Path]: Paths to video and info files, or None if failed
     """
-    import subprocess
-
     # Ensure download directory exists
     dl_dir.mkdir(parents=True, exist_ok=True)
 
-    # Extract video ID from URL (assuming YouTube, but could be expanded)
-    video_id = url.split("v=")[-1].split("&")[0]
-    extractor = "youtube"  # Could detect this from URL if needed
+    # Extract video ID from URL
+    video_id, extractor = extract_video_id(url)
 
     # Define expected output paths
     info_file = dl_dir / f"yt-mpv-{extractor}-{video_id}.info.json"
@@ -210,7 +195,12 @@ def download_video(
             url,
         ]
 
-        subprocess.run(cmd, check=True, text=True, capture_output=True)
+        return_code, _, stderr = run_command(cmd, check=True)
+
+        if return_code != 0:
+            logger.error(f"Download failed: {stderr}")
+            notify("Download failed")
+            return None
 
         # Simple check if files exist after download
         if not info_file.exists():
@@ -225,7 +215,7 @@ def download_video(
 
         return video_file, info_file
 
-    except subprocess.SubprocessError as e:
+    except Exception as e:
         logger.error(f"Download failed: {e}")
         notify("Download failed")
         return None
@@ -263,8 +253,6 @@ def archive_url(url: str, dl_dir: Path, venv_bin: Path) -> bool:
 
     # Clean up files if upload was successful
     if success:
-        from yt_mpv.cache import cleanup_cache_files
-
         if cleanup_cache_files(video_file, info_file):
             logger.info("Cache files cleaned up successfully")
         else:

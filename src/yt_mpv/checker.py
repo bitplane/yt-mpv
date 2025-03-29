@@ -2,27 +2,9 @@
 Archive checking functionality for yt-mpv
 """
 
-import hashlib
-import os
 import sys
 
-
-def generate_archive_id(url, username=None):
-    """Generate a unique Archive.org identifier for a video URL.
-
-    This must match the ID generation in launch.py.
-
-    Args:
-        url: The URL to generate an ID for
-        username: Optional username, defaults to current user
-
-    Returns:
-        str: The archive identifier
-    """
-    if username is None:
-        username = os.getlogin()
-    url_hash = hashlib.sha1(url.encode()).hexdigest()[:8]
-    return f"yt-mpv-{username}-{url_hash}"
+from yt_mpv.utils import generate_archive_id
 
 
 def check_archive_status(url):
@@ -41,12 +23,9 @@ def check_archive_status(url):
         identifier = generate_archive_id(url)
 
         # Search archive.org
-        search = internetarchive.search_items(f"identifier:{identifier}")
-        item = next(search, None)
-
-        if item:
-            item_url = f"https://archive.org/details/{identifier}"
-            return item_url
+        item = internetarchive.get_item(identifier)
+        if item.exists:
+            return f"https://archive.org/details/{identifier}"
         else:
             return None
 

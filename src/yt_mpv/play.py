@@ -3,24 +3,14 @@ Video playback functionality for yt-mpv
 """
 
 import logging
+import os
 import shutil
-import subprocess
 from pathlib import Path
-from typing import Tuple
+
+from yt_mpv.utils import notify, run_command
 
 # Configure logging
 logger = logging.getLogger("yt-mpv")
-
-
-def notify(message: str) -> None:
-    """Send desktop notification if possible."""
-    try:
-        subprocess.run(
-            ["notify-send", "YouTube MPV", message], check=False, capture_output=True
-        )
-    except (subprocess.SubprocessError, FileNotFoundError):
-        # If notification fails, just log it
-        pass
 
 
 def check_mpv_installed() -> bool:
@@ -30,19 +20,6 @@ def check_mpv_installed() -> bool:
         bool: True if mpv is installed, False otherwise
     """
     return shutil.which("mpv") is not None
-
-
-def run_command(cmd: list, desc: str = "", check: bool = True) -> Tuple[int, str, str]:
-    """Run a command and return status, stdout, stderr."""
-    try:
-        if desc:
-            logger.info(desc)
-
-        proc = subprocess.run(cmd, check=check, text=True, capture_output=True)
-        return proc.returncode, proc.stdout, proc.stderr
-    except subprocess.SubprocessError as e:
-        logger.error(f"Command failed: {e}")
-        return 1, "", str(e)
 
 
 def play_video(url: str, additional_mpv_args: list = None) -> bool:
@@ -97,8 +74,6 @@ def update_yt_dlp(venv_dir: Path, venv_bin: Path) -> bool:
     """
     try:
         # Prepare environment with venv
-        import os
-
         env = os.environ.copy()
         env["VIRTUAL_ENV"] = str(venv_dir)
         env["PATH"] = f"{venv_bin}:{env.get('PATH', '')}"

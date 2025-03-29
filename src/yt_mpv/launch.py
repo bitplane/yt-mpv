@@ -7,12 +7,12 @@ import os
 import random
 import re
 import sys
-from pathlib import Path
 
 # Import functionality from separated modules
 from yt_mpv.archive import archive_url, check_archive_status
 from yt_mpv.cache import purge_cache
 from yt_mpv.play import check_mpv_installed, play_video, update_yt_dlp
+from yt_mpv.utils import DL_DIR, VENV_BIN, VENV_DIR, get_real_url
 
 # Configure logging
 logging.basicConfig(
@@ -21,21 +21,6 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 logger = logging.getLogger("yt-mpv")
-
-# Constants - consistent naming throughout
-HOME = Path.home()
-DL_DIR = HOME / ".cache/yt-mpv"
-VENV_DIR = Path(os.environ.get("YT_MPV_VENV", HOME / ".local/share/yt-mpv/.venv"))
-VENV_BIN = VENV_DIR / "bin"
-
-
-def get_real_url(raw_url: str) -> str:
-    """Convert custom scheme to regular http/https URL."""
-    if raw_url.startswith("x-yt-mpvs:"):
-        return raw_url.replace("x-yt-mpvs:", "https:", 1)
-    elif raw_url.startswith("x-yt-mpv:"):
-        return raw_url.replace("x-yt-mpv:", "http:", 1)
-    return raw_url
 
 
 def check_dependencies() -> bool:

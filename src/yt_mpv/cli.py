@@ -5,19 +5,12 @@ Command-line interface for yt-mpv
 
 import argparse
 import logging
-import os
 import sys
-from pathlib import Path
 
 from yt_mpv.cache import clean_all_cache, format_cache_info, purge_cache
 from yt_mpv.checker import check_archive_status
 from yt_mpv.installer import Installer
-
-# Constants
-HOME = Path.home()
-DL_DIR = HOME / ".cache/yt-mpv"
-VENV_DIR = Path(os.environ.get("YT_MPV_VENV", HOME / ".local/share/yt-mpv/.venv"))
-VENV_BIN = VENV_DIR / "bin"
+from yt_mpv.utils import DL_DIR, VENV_BIN, VENV_DIR
 
 # Configure logging
 logging.basicConfig(
