@@ -5,13 +5,16 @@ Command implementations for yt-mpv CLI
 import logging
 import sys
 
-from yt_mpv.archive.archive_org import check_archive_status
+from yt_mpv.archive.archive_org import is_archived
 from yt_mpv.archive.yt_dlp import archive_url
-from yt_mpv.install.setup import install_app, remove_app, setup_app
+from yt_mpv.archive.yt_dlp import update as update_yt_dlp
+from yt_mpv.install.setup import configure as setup_app
+from yt_mpv.install.setup import install as install_app
+from yt_mpv.install.setup import remove as remove_app
 from yt_mpv.launcher import main as launch_main
-from yt_mpv.player import play_video, update_yt_dlp
+from yt_mpv.player import play as player_play
+from yt_mpv.utils.cache import clear, prune, summary
 from yt_mpv.utils.config import DL_DIR, VENV_BIN, VENV_DIR
-from yt_mpv.utils.fs import clean_all_cache, format_cache_info, purge_cache
 
 logger = logging.getLogger("yt-mpv")
 
@@ -49,7 +52,7 @@ def play(args):
     mpv_args = args.mpv_args.split() if args.mpv_args else []
 
     # Play the video
-    return play_video(args.url, mpv_args)
+    return player_play(args.url, mpv_args)
 
 
 def archive(args):
@@ -64,7 +67,7 @@ def archive(args):
 
 def check(args):
     """Check command implementation."""
-    result = check_archive_status(args.url)
+    result = is_archived(args.url)
     if result:
         print(result)
         return True
@@ -77,13 +80,13 @@ def cache(args):
     """Cache command implementation."""
     if args.cache_command == "info":
         # Show cache information
-        print(format_cache_info())
+        print(summary())
         return True
 
     elif args.cache_command == "clean":
         if args.all:
             # Remove all files
-            files_deleted, bytes_freed = clean_all_cache()
+            files_deleted, bytes_freed = clear()
             if files_deleted > 0:
                 print(
                     f"Removed all {files_deleted} files ({bytes_freed / 1048576:.2f} MB)"
@@ -93,7 +96,7 @@ def cache(args):
             return True
         else:
             # Remove files older than specified days
-            files_deleted, bytes_freed = purge_cache(max_age_days=args.days)
+            files_deleted, bytes_freed = prune(max_age_days=args.days)
             if files_deleted > 0:
                 print(f"Removed {files_deleted} files ({bytes_freed / 1048576:.2f} MB)")
             else:

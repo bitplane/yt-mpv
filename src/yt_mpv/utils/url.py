@@ -3,7 +3,6 @@ URL handling utilities for yt-mpv
 """
 
 import urllib.parse
-from typing import dict
 
 
 def get_real_url(raw_url: str) -> str:

@@ -11,7 +11,7 @@ from pathlib import Path
 logger = logging.getLogger("yt-mpv")
 
 
-def get_bookmark_html_path():
+def get_path():
     """Get the path to the bookmark.html file."""
     try:
         # For Python 3.9+
@@ -27,7 +27,7 @@ def get_bookmark_html_path():
         )
 
 
-def get_bookmarklet_js():
+def get_js():
     """Get the JavaScript bookmarklet code."""
     play_only_js = (
         "javascript:(function(){var originalUrl = encodeURIComponent(window.location.href); "
@@ -42,11 +42,11 @@ def get_bookmarklet_js():
     return (play_only_js, play_archive_js)
 
 
-def open_bookmarklet():
+def open():
     """Open the bookmarklet HTML in a browser using a data URI."""
     try:
         # Get the HTML file content
-        html_path = get_bookmark_html_path()
+        html_path = get_path()
 
         try:
             with open(html_path, "r", encoding="utf-8") as f:
@@ -54,7 +54,7 @@ def open_bookmarklet():
         except Exception as e:
             logger.error(f"Could not read bookmark HTML file: {e}")
             # Fallback to just printing the JavaScript
-            play_only_js, play_archive_js = get_bookmarklet_js()
+            play_only_js, play_archive_js = get_js()
             print("Please manually create these bookmarks:")
             print(f"MPV Play: {play_only_js}")
             print(f"MPV Play+Archive: {play_archive_js}")
@@ -69,7 +69,7 @@ def open_bookmarklet():
         webbrowser.open(data_uri)
 
         # Also print the JavaScript in case the browser doesn't open
-        play_only_js, play_archive_js = get_bookmarklet_js()
+        play_only_js, play_archive_js = get_js()
         print(
             "\nIf your browser doesn't open automatically, you can create these bookmarks manually:"
         )
@@ -81,7 +81,7 @@ def open_bookmarklet():
     except Exception as e:
         logger.error(f"Could not open bookmarklet HTML: {e}")
         # Provide the bookmarklet JavaScript even if there's an error
-        play_only_js, play_archive_js = get_bookmarklet_js()
+        play_only_js, play_archive_js = get_js()
         print("Please manually create bookmarks with the following URLs:")
         print(f"MPV Play: {play_only_js}")
         print(f"MPV Play+Archive: {play_archive_js}")

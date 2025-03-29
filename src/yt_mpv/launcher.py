@@ -9,11 +9,13 @@ import sys
 import urllib.parse
 
 # Import functionality
-from yt_mpv.archive.archive_org import check_archive_status
+from yt_mpv.archive.archive_org import is_archived
 from yt_mpv.archive.yt_dlp import archive_url
-from yt_mpv.player import check_mpv_installed, play_video, update_yt_dlp
+from yt_mpv.archive.yt_dlp import update as update_yt_dlp
+from yt_mpv.player import is_installed as is_mpv_installed
+from yt_mpv.player import play
+from yt_mpv.utils.cache import prune
 from yt_mpv.utils.config import DL_DIR, VENV_BIN, VENV_DIR
-from yt_mpv.utils.fs import purge_cache
 from yt_mpv.utils.url import get_real_url, parse_url_params
 
 # Configure logging
@@ -28,7 +30,7 @@ logger = logging.getLogger("yt-mpv")
 def check_dependencies() -> bool:
     """Check if required dependencies are installed."""
     # Check for mpv
-    if not check_mpv_installed():
+    if not is_mpv_installed():
         return False
 
     # Check for Python venv
@@ -81,12 +83,12 @@ def main():
     if random.random() < 0.1:
         try:
             # Clean files older than 30 days
-            purge_cache(max_age_days=30)
+            prune(max_age_days=30)
         except Exception as e:
             logger.warning(f"Cache cleaning failed: {e}")
 
     # Play the video
-    if not play_video(url):
+    if not play(url):
         sys.exit(1)
 
     # Skip archiving if not requested
@@ -95,7 +97,7 @@ def main():
         sys.exit(0)
 
     # Check if already archived before downloading
-    archive_url_path = check_archive_status(url)
+    archive_url_path = is_archived(url)
     if archive_url_path:
         logger.info(f"Already archived at: {archive_url_path}")
         sys.exit(0)

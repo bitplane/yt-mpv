@@ -14,14 +14,14 @@ from yt_mpv.utils.notify import notify
 logger = logging.getLogger("yt-mpv")
 
 
-def check_mpv_installed() -> bool:
+def is_installed() -> bool:
     """Check if mpv is installed."""
     return shutil.which("mpv") is not None
 
 
-def play_video(url: str, additional_mpv_args: list = None) -> bool:
+def play(url: str, additional_args: list = None) -> bool:
     """Play a video with mpv."""
-    if not check_mpv_installed():
+    if not is_installed():
         logger.error("mpv is not installed")
         notify("mpv not found. Please install it.")
         return False
@@ -30,8 +30,8 @@ def play_video(url: str, additional_mpv_args: list = None) -> bool:
     cmd = ["mpv", "--ytdl=yes", f"--term-status-msg=Playing: {url}"]
 
     # Add additional args if provided
-    if additional_mpv_args:
-        cmd.extend(additional_mpv_args)
+    if additional_args:
+        cmd.extend(additional_args)
 
     # Add the URL
     cmd.append(url)

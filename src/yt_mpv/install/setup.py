@@ -10,14 +10,14 @@ import sys
 from pathlib import Path
 
 from yt_mpv.archive.archive_org import configure as configure_ia
-from yt_mpv.install.bookmarklet import open_bookmarklet
+from yt_mpv.install.bookmarklet import open as open_bookmarklet
 from yt_mpv.install.desktop import setup_desktop_entry
 from yt_mpv.utils.fs import run_command
 
 logger = logging.getLogger("yt-mpv")
 
 
-def install_app(prefix=None):
+def install(prefix=None):
     """Install yt-mpv.
 
     Args:
@@ -108,11 +108,11 @@ python -m yt_mpv launch "$@"
     print(f"yt-mpv installed successfully to {prefix}")
 
     # Run setup after successful installation
-    setup_success = setup_app(prefix)
+    setup_success = configure(prefix)
     return setup_success
 
 
-def setup_app(prefix=None):
+def configure(prefix=None):
     """Configure yt-mpv post-installation.
 
     Args:
@@ -144,7 +144,7 @@ def setup_app(prefix=None):
     return True
 
 
-def remove_app(prefix=None):
+def remove(prefix=None):
     """Uninstall yt-mpv.
 
     Args:

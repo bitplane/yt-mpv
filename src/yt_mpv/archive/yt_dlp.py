@@ -3,19 +3,21 @@ Video downloading functionality using yt-dlp
 """
 
 import logging
+import os
+import shutil
 import subprocess
 from pathlib import Path
-from typing import tuple
 
-from yt_mpv.archive.archive_org import check_archive_status, upload_to_archive
-from yt_mpv.utils.fs import cleanup_cache_files, run_command
+from yt_mpv.archive.archive_org import is_archived, upload
+from yt_mpv.utils.cache import remove
+from yt_mpv.utils.fs import run_command
 from yt_mpv.utils.notify import notify
 
 # Configure logging
 logger = logging.getLogger("yt-mpv")
 
 
-def get_yt_dlp_filenames(url: str, dl_dir: Path, venv_bin: Path) -> tuple[Path, Path]:
+def get_filenames(url: str, dl_dir: Path, venv_bin: Path) -> tuple[Path, Path]:
     """Get filenames yt-dlp would use for a URL."""
     dl_dir.mkdir(parents=True, exist_ok=True)
     output_pattern = f"{dl_dir}/yt-mpv-%(extractor)s-%(id)s.%(ext)s"
@@ -41,11 +43,11 @@ def get_yt_dlp_filenames(url: str, dl_dir: Path, venv_bin: Path) -> tuple[Path, 
     return video_file, info_file
 
 
-def download_video(url: str, dl_dir: Path, venv_bin: Path) -> tuple[Path, Path] | None:
+def download(url: str, dl_dir: Path, venv_bin: Path) -> tuple[Path, Path] | None:
     """Download video using yt-dlp and return paths to video and info files."""
     try:
         # Get the expected filenames from yt-dlp
-        video_file, info_file = get_yt_dlp_filenames(url, dl_dir, venv_bin)
+        video_file, info_file = get_filenames(url, dl_dir, venv_bin)
 
         # Define output pattern to use the same name pattern
         output_pattern = str(video_file.with_suffix(".%(ext)s"))
@@ -96,10 +98,40 @@ def download_video(url: str, dl_dir: Path, venv_bin: Path) -> tuple[Path, Path] 
         return None
 
 
+def update(venv_dir: Path, venv_bin: Path) -> bool:
+    """Update yt-dlp using uv if available."""
+    try:
+        # Prepare environment with venv
+        env = os.environ.copy()
+        env["VIRTUAL_ENV"] = str(venv_dir)
+        env["PATH"] = f"{venv_bin}:{env.get('PATH', '')}"
+
+        # First try to use uv if available in the venv
+        uv_path = venv_bin / "uv"
+        if uv_path.exists():
+            logger.info("Updating yt-dlp using uv in venv")
+            cmd = [str(uv_path), "pip", "install", "--upgrade", "yt-dlp"]
+            run_command(cmd, check=False, env=env)
+        # Then try system uv
+        elif shutil.which("uv"):
+            logger.info("Updating yt-dlp using system uv")
+            cmd = ["uv", "pip", "install", "--upgrade", "yt-dlp"]
+            run_command(cmd, check=False, env=env)
+        else:
+            # Fall back to pip
+            logger.info("Updating yt-dlp using pip")
+            cmd = [str(venv_bin / "pip"), "install", "--upgrade", "yt-dlp"]
+            run_command(cmd, check=False, env=env)
+        return True
+    except Exception as e:
+        logger.warning(f"Failed to update yt-dlp: {e}")
+        return False
+
+
 def archive_url(url: str, dl_dir: Path, venv_bin: Path) -> bool:
     """Archive a URL to archive.org."""
     # First check if already archived
-    archive_url_path = check_archive_status(url)
+    archive_url_path = is_archived(url)
     if archive_url_path:
         logger.info(f"URL already archived: {archive_url_path}")
         notify(f"Already archived: {archive_url_path}")
@@ -107,7 +139,7 @@ def archive_url(url: str, dl_dir: Path, venv_bin: Path) -> bool:
 
     try:
         # Get the filenames that yt-dlp would use
-        video_file, info_file = get_yt_dlp_filenames(url, dl_dir, venv_bin)
+        video_file, info_file = get_filenames(url, dl_dir, venv_bin)
 
         # Check if the files already exist (from previous play)
         if video_file.exists() and info_file.exists():
@@ -115,7 +147,7 @@ def archive_url(url: str, dl_dir: Path, venv_bin: Path) -> bool:
         else:
             # Need to download the video
             logger.info("Downloading video for archiving")
-            result = download_video(url, dl_dir, venv_bin)
+            result = download(url, dl_dir, venv_bin)
             if not result:
                 return False
 
@@ -127,11 +159,11 @@ def archive_url(url: str, dl_dir: Path, venv_bin: Path) -> bool:
         return False
 
     # Upload to Archive.org
-    success = upload_to_archive(video_file, info_file, url)
+    success = upload(video_file, info_file, url)
 
     # Clean up files if upload was successful
     if success:
-        if cleanup_cache_files(video_file, info_file):
+        if remove(video_file, info_file):
             logger.info("Cache files cleaned up successfully")
         else:
             logger.warning("Failed to clean up some cache files")

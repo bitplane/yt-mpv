@@ -6,7 +6,6 @@ import json
 import logging
 import os
 from pathlib import Path
-from typing import any, dict
 
 from yt_mpv.utils.fs import generate_archive_id
 from yt_mpv.utils.notify import notify
@@ -15,8 +14,9 @@ from yt_mpv.utils.notify import notify
 logger = logging.getLogger("yt-mpv")
 
 
-def check_archive_status(url: str) -> str | None:
-    """Check if a URL has been archived.
+def is_archived(url: str) -> str | None:
+    """
+    Check if a URL is already archived in archive.org.
 
     Args:
         url: The URL to check
@@ -45,8 +45,8 @@ def check_archive_status(url: str) -> str | None:
         return None
 
 
-def extract_metadata(info_file: Path, url: str) -> dict[str, any]:
-    """Extract metadata from yt-dlp's info.json file."""
+def prepare_metadata(info_file: Path, url: str) -> dict[str, any]:
+    """Extract and prepare metadata from yt-dlp's info.json file for upload."""
     # Load metadata from yt-dlp's info.json
     try:
         with open(info_file, "r") as f:
@@ -82,13 +82,13 @@ def extract_metadata(info_file: Path, url: str) -> dict[str, any]:
         }
 
 
-def upload_to_archive(video_file: Path, info_file: Path, url: str) -> bool:
-    """Upload video to Archive.org using the internetarchive library."""
+def upload(video_file: Path, info_file: Path, url: str) -> bool:
+    """Upload video to Archive.org."""
     try:
         import internetarchive
 
         # Extract metadata from info.json
-        metadata = extract_metadata(info_file, url)
+        metadata = prepare_metadata(info_file, url)
 
         # Generate archive identifier
         username = os.getlogin()
