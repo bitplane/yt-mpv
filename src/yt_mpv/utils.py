@@ -60,13 +60,28 @@ def get_real_url(raw_url: str) -> str:
     Returns:
         str: URL with standard http/https scheme
     """
-    # Remove any query parameters first
-    url_part = raw_url.split("?", 1)[0]
+    # Split URL and parameters
+    parts = raw_url.split("?", 1)
+    url_part = parts[0]
 
+    # Convert scheme
     if url_part.startswith("x-yt-mpvs:"):
-        return url_part.replace("x-yt-mpvs:", "https:", 1)
+        url_part = url_part.replace("x-yt-mpvs:", "https:", 1)
     elif url_part.startswith("x-yt-mpv:"):
-        return url_part.replace("x-yt-mpv:", "http:", 1)
+        url_part = url_part.replace("x-yt-mpv:", "http:", 1)
+
+    # Reconstruct URL with parameters
+    if len(parts) > 1:
+        # Filter out our custom parameters like 'archive'
+        params = []
+        for param in parts[1].split("&"):
+            if not param.startswith("archive="):
+                params.append(param)
+
+        # Add back query parameters that aren't our custom ones
+        if params:
+            url_part = f"{url_part}?{'&'.join(params)}"
+
     return url_part
 
 
