@@ -60,11 +60,14 @@ def get_real_url(raw_url: str) -> str:
     Returns:
         str: URL with standard http/https scheme
     """
-    if raw_url.startswith("x-yt-mpvs:"):
-        return raw_url.replace("x-yt-mpvs:", "https:", 1)
-    elif raw_url.startswith("x-yt-mpv:"):
-        return raw_url.replace("x-yt-mpv:", "http:", 1)
-    return raw_url
+    # Remove any query parameters first
+    url_part = raw_url.split("?", 1)[0]
+
+    if url_part.startswith("x-yt-mpvs:"):
+        return url_part.replace("x-yt-mpvs:", "https:", 1)
+    elif url_part.startswith("x-yt-mpv:"):
+        return url_part.replace("x-yt-mpv:", "http:", 1)
+    return url_part
 
 
 def extract_video_id(url: str) -> Tuple[str, str]:

@@ -1,5 +1,5 @@
 """
-Launcher for yt-mpv: Play videos with mpv, then upload to Internet Archive.
+Launcher for yt-mpv: Play videos with mpv, then optionally upload to Internet Archive.
 """
 
 import logging
@@ -7,6 +7,7 @@ import os
 import random
 import re
 import sys
+import urllib.parse
 
 # Import functionality from separated modules
 from yt_mpv.archive import archive_url, check_archive_status
@@ -46,7 +47,17 @@ def main():
 
     # Parse URL
     raw_url = sys.argv[1]
-    url = get_real_url(raw_url)
+
+    # Extract url and query parameters
+    if "?" in raw_url:
+        base_url, query = raw_url.split("?", 1)
+        params = urllib.parse.parse_qs(query)
+        should_archive = params.get("archive", ["1"])[0] == "1"
+        url = get_real_url(base_url)
+    else:
+        url = get_real_url(raw_url)
+        # Default to archiving if not specified
+        should_archive = True
 
     # Basic URL validation
     if not re.match(r"^https?://", url):
@@ -71,6 +82,11 @@ def main():
     # Play the video
     if not play_video(url):
         sys.exit(1)
+
+    # Skip archiving if not requested
+    if not should_archive:
+        logger.info("Archiving skipped as requested")
+        sys.exit(0)
 
     # Check if already archived before downloading
     archive_url_path = check_archive_status(url)

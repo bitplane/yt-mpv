@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <title>YouTube MPV Bookmarklet</title>
+        <title>YouTube MPV Bookmarklets</title>
         <style>
             body {
                 font-family: sans-serif;
@@ -13,6 +13,7 @@
             .bookmarklet {
                 display: inline-block;
                 padding: 10px 15px;
+                margin: 10px 5px 10px 0;
                 background: #f3f3f3;
                 border: 1px solid #ddd;
                 border-radius: 4px;
@@ -22,6 +23,14 @@
             }
             .bookmarklet:hover {
                 background: #e9e9e9;
+            }
+            .play-only {
+                background: #E0F7FA;
+                border-color: #00BCD4;
+            }
+            .play-archive {
+                background: #F1F8E9;
+                border-color: #8BC34A;
             }
             .instructions {
                 margin-top: 30px;
@@ -33,22 +42,27 @@
         </style>
     </head>
     <body>
-        <h1>YouTube MPV Bookmarklet</h1>
+        <h1>YouTube MPV Bookmarklets</h1>
 
-        <p>This bookmarklet allows you to play YouTube videos (and other supported sites) in MPV and automatically archive them to archive.org.</p>
+        <p>These bookmarklets allow you to play YouTube videos (and other supported sites) in MPV, with an option to archive them to archive.org.</p>
 
         <h2>Installation:</h2>
-        <p>Drag this link to your browser's bookmarks bar:</p>
+        <p>Drag one or both of these links to your browser's bookmarks bar:</p>
 
-        <a class="bookmarklet" href="javascript:(function(){window.location.href = window.location.href.replace(/^http/, 'x-yt-mpv');})();">▶️ MPV</a>
+        <a class="bookmarklet play-only" href="javascript:(function(){window.location.href = window.location.href.replace(/^http/, 'x-yt-mpv') + '?archive=0';})();">▶️ MPV Play</a>
+        <a class="bookmarklet play-archive" href="javascript:(function(){window.location.href = window.location.href.replace(/^http/, 'x-yt-mpv') + '?archive=1';})();">▶️ MPV Play+Archive</a>
 
         <div class="instructions">
             <h3>How to use:</h3>
             <ol>
-                <li>Install the bookmarklet by dragging the button above to your bookmarks bar</li>
+                <li>Install the bookmarklets by dragging the buttons above to your bookmarks bar</li>
                 <li>Navigate to any YouTube video (or other supported site)</li>
-                <li>Click the bookmarklet</li>
-                <li>The video will open in MPV and be archived to archive.org</li>
+                <li>Click the appropriate bookmarklet:
+                    <ul>
+                        <li><strong>MPV Play</strong>: Play the video in MPV without archiving</li>
+                        <li><strong>MPV Play+Archive</strong>: Play the video in MPV and archive it to archive.org</li>
+                    </ul>
+                </li>
             </ol>
 
             <h3>Supported Sites:</h3>
