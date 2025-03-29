@@ -154,12 +154,9 @@ MimeType=x-scheme-handler/x-yt-mpv;x-scheme-handler/x-yt-mpvs;
             import shutil
             from pathlib import Path
 
-            # Use the cache directory to store the bookmarklet HTML
-            cache_dir = Path.home() / ".cache/yt-mpv"
-            cache_dir.mkdir(parents=True, exist_ok=True)
-
-            # Path for the copied bookmarklet HTML
-            dest_path = cache_dir / "bookmarklet.html"
+            # Use the system temp directory
+            temp_dir = Path("/tmp")
+            dest_path = temp_dir / "yt-mpv-bookmarklets.html"
 
             # Find and copy the original bookmarklet HTML
             try:
@@ -179,14 +176,27 @@ MimeType=x-scheme-handler/x-yt-mpv;x-scheme-handler/x-yt-mpvs;
                 )
                 shutil.copy(bookmarklet_path, dest_path)
 
+            # Make sure the file is readable by everyone
             dest_path.chmod(0o644)
 
+            # Open the copied file in the browser
             print(f"Opening bookmarklet page at {dest_path}")
-
+            print(
+                f"If your browser doesn't open automatically, please open this file manually: {dest_path}"
+            )
             webbrowser.open(f"file://{dest_path}")
 
         except Exception as e:
             print(f"Could not open bookmarklet HTML: {e}")
+            print("Please manually create bookmarks with the following URLs:")
+            print(
+                "MPV Play: javascript:(function(){window.location.href = "
+                "window.location.href.replace(/^http/, 'x-yt-mpv') + '?archive=0';})()"
+            )
+            print(
+                "MPV Play+Archive: javascript:(function(){window.location.href = "
+                "window.location.href.replace(/^http/, 'x-yt-mpv') + '?archive=1';})()"
+            )
 
     def remove(self):
         """Uninstall yt-mpv."""
