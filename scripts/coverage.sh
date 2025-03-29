@@ -2,4 +2,6 @@
 
 source .venv/bin/activate
 
-pytest --cov="src/$1" --cov-report=html .
+MODULE_NAME=$(echo "$1" | tr '-' '_')
+pytest --cov="src/$MODULE_NAME" --cov-report=html .
+
