@@ -12,7 +12,7 @@ from yt_mpv.install.setup import configure as setup_app
 from yt_mpv.install.setup import install as install_app
 from yt_mpv.install.setup import remove as remove_app
 from yt_mpv.launcher import main as launch_main
-from yt_mpv.player import play_player
+from yt_mpv.player import play as play_player
 from yt_mpv.utils.cache import clear, summary
 from yt_mpv.utils.config import DL_DIR, VENV_BIN, VENV_DIR
 
