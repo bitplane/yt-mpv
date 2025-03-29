@@ -149,24 +149,18 @@ MimeType=x-scheme-handler/x-yt-mpv;x-scheme-handler/x-yt-mpvs;
         return True
 
     def open_bookmarklet(self):
-        """Open the bookmarklet HTML in a browser."""
+        """Open the bookmarklet HTML in a browser using a data URI."""
         try:
-            import shutil
-            from pathlib import Path
+            import base64
 
-            # Use the system temp directory
-            temp_dir = Path("/tmp")
-            dest_path = temp_dir / "yt-mpv-bookmarklets.html"
-
-            # Find and copy the original bookmarklet HTML
+            # Find the bookmarklet HTML content
             try:
                 # For Python 3.9+
                 from importlib import resources
 
-                bookmark_path = resources.files("yt_mpv.install").joinpath(
-                    "bookmark.html"
+                bookmark_content = resources.read_text(
+                    "yt_mpv.install", "bookmark.html"
                 )
-                shutil.copy(bookmark_path, dest_path)
             except (AttributeError, ImportError):
                 # Fallback for earlier Python versions
                 import pkg_resources
@@ -174,17 +168,28 @@ MimeType=x-scheme-handler/x-yt-mpv;x-scheme-handler/x-yt-mpvs;
                 bookmarklet_path = pkg_resources.resource_filename(
                     "yt_mpv", "install/bookmark.html"
                 )
-                shutil.copy(bookmarklet_path, dest_path)
+                with open(bookmarklet_path, "r") as f:
+                    bookmark_content = f.read()
 
-            # Make sure the file is readable by everyone
-            dest_path.chmod(0o644)
+            # Encode the HTML content as a data URI
+            encoded_content = base64.b64encode(bookmark_content.encode()).decode()
+            data_uri = f"data:text/html;base64,{encoded_content}"
 
-            # Open the copied file in the browser
-            print(f"Opening bookmarklet page at {dest_path}")
+            # Open the data URI in the browser
+            print("Opening bookmarklet page...")
+            webbrowser.open(data_uri)
+
             print(
-                f"If your browser doesn't open automatically, please open this file manually: {dest_path}"
+                "\nIf your browser doesn't open automatically, you can create these bookmarks manually:"
             )
-            webbrowser.open(f"file://{dest_path}")
+            print(
+                "MPV Play: javascript:(function(){window.location.href = "
+                "window.location.href.replace(/^http/, 'x-yt-mpv') + '?archive=0';})()"
+            )
+            print(
+                "MPV Play+Archive: javascript:(function(){window.location.href = "
+                "window.location.href.replace(/^http/, 'x-yt-mpv') + '?archive=1';})()"
+            )
 
         except Exception as e:
             print(f"Could not open bookmarklet HTML: {e}")
