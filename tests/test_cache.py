@@ -7,7 +7,7 @@ import time
 
 import pytest
 
-from yt_mpv.cache import (
+from yt_mpv.utils.cache import (
     clean_all_cache,
     cleanup_cache_files,
     format_cache_info,

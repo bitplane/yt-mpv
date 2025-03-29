@@ -5,12 +5,8 @@ Tests for the yt-mpv utils module.
 import hashlib
 from unittest.mock import patch
 
-from yt_mpv.utils import (
-    extract_video_id,
-    generate_archive_id,
-    get_real_url,
-    run_command,
-)
+from yt_mpv.utils.system import generate_archive_id, run_command
+from yt_mpv.utils.url import extract_video_id, get_real_url
 
 
 def test_generate_archive_id():
