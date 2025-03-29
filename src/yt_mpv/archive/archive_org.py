@@ -63,7 +63,6 @@ def prepare_metadata(info_file: Path, url: str) -> dict[str, any]:
         "subject": tags,
         "source": source,
         "mediatype": "movies",
-        "collection": "community_video",  # Changed from opensource_movies
     }
 
     return metadata
