@@ -49,7 +49,7 @@ def open():
         html_path = get_path()
 
         try:
-            with open(html_path, "r", encoding="utf-8") as f:
+            with open(html_path) as f:
                 bookmark_content = f.read()
         except Exception as e:
             logger.error(f"Could not read bookmark HTML file: {e}")
