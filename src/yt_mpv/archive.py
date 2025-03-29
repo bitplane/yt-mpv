@@ -176,9 +176,8 @@ def download_video(
     # Extract video ID from URL
     video_id, extractor = extract_video_id(url)
 
-    # Define expected output paths
-    info_file = dl_dir / f"yt-mpv-{extractor}-{video_id}.info.json"
-    video_file = dl_dir / f"yt-mpv-{extractor}-{video_id}.mp4"
+    # Define expected output pattern
+    output_pattern = f"{dl_dir}/yt-mpv-%(extractor)s-%(id)s.%(ext)s"
 
     # Use yt-dlp to download the video
     try:
@@ -187,29 +186,56 @@ def download_video(
             str(venv_bin / "yt-dlp"),
             "-f",
             "bestvideo*+bestaudio/best",
-            "--merge-output-format",
-            "mp4",
             "--write-info-json",
             "-o",
-            f"{dl_dir}/yt-mpv-%(extractor)s-%(id)s.%(ext)s",
+            output_pattern,
             url,
         ]
 
-        return_code, _, stderr = run_command(cmd, check=True)
+        return_code, stdout, stderr = run_command(cmd, check=True)
 
         if return_code != 0:
             logger.error(f"Download failed: {stderr}")
             notify("Download failed")
             return None
 
-        # Simple check if files exist after download
+        # Find the info file
+        info_file = dl_dir / f"yt-mpv-{extractor}-{video_id}.info.json"
         if not info_file.exists():
             logger.error(f"Info file not found at expected path: {info_file}")
             notify("Download appears incomplete - info file missing")
             return None
 
-        if not video_file.exists():
-            logger.error(f"Video file not found at expected path: {video_file}")
+        # Find the video file - need to identify the extension from yt-dlp output
+        # or check the files in the directory matching the pattern
+        video_file = None
+
+        # Try to parse the output to find the filename
+        if stdout:
+            # Look for "[download] Destination:" line which contains the full path
+            for line in stdout.splitlines():
+                if (
+                    "[download] Destination:" in line
+                    and f"yt-mpv-{extractor}-{video_id}." in line
+                ):
+                    potential_path = line.split("Destination:", 1)[1].strip()
+                    potential_file = Path(potential_path)
+                    if (
+                        potential_file.exists()
+                        and potential_file.suffix != ".info.json"
+                    ):
+                        video_file = potential_file
+                        break
+
+        # If we couldn't find it in the output, search the directory
+        if not video_file:
+            for file in dl_dir.glob(f"yt-mpv-{extractor}-{video_id}.*"):
+                if file.suffix != ".info.json" and file.exists():
+                    video_file = file
+                    break
+
+        if not video_file or not video_file.exists():
+            logger.error(f"Video file not found for: yt-mpv-{extractor}-{video_id}.*")
             notify("Download appears incomplete - video file missing")
             return None
 
