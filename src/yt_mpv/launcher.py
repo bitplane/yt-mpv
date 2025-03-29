@@ -4,7 +4,6 @@ Launcher for yt-mpv: Play videos with mpv, then optionally upload to Internet Ar
 
 import logging
 import os
-import random
 import sys
 import urllib.parse
 
@@ -14,7 +13,6 @@ from yt_mpv.archive.yt_dlp import archive_url
 from yt_mpv.archive.yt_dlp import update as update_yt_dlp
 from yt_mpv.player import is_installed as is_mpv_installed
 from yt_mpv.player import play
-from yt_mpv.utils.cache import prune
 from yt_mpv.utils.config import DL_DIR, VENV_BIN, VENV_DIR
 from yt_mpv.utils.url import get_real_url, parse_url_params
 
@@ -78,14 +76,6 @@ def main():
 
     # Update yt-dlp to avoid YouTube API changes breaking functionality
     update_yt_dlp(VENV_DIR, VENV_BIN)
-
-    # Occasionally clean old cache files (once every ~10 runs randomly)
-    if random.random() < 0.1:
-        try:
-            # Clean files older than 30 days
-            prune(max_age_days=30)
-        except Exception as e:
-            logger.warning(f"Cache cleaning failed: {e}")
 
     # Play the video
     if not play(url):

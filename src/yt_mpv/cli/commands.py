@@ -12,8 +12,8 @@ from yt_mpv.install.setup import configure as setup_app
 from yt_mpv.install.setup import install as install_app
 from yt_mpv.install.setup import remove as remove_app
 from yt_mpv.launcher import main as launch_main
-from yt_mpv.player import play as player_play
-from yt_mpv.utils.cache import clear, prune, summary
+from yt_mpv.player import play_player
+from yt_mpv.utils.cache import clear, summary
 from yt_mpv.utils.config import DL_DIR, VENV_BIN, VENV_DIR
 
 logger = logging.getLogger("yt-mpv")
@@ -52,7 +52,7 @@ def play(args):
     mpv_args = args.mpv_args.split() if args.mpv_args else []
 
     # Play the video
-    return player_play(args.url, mpv_args)
+    return play_player(args.url, mpv_args)
 
 
 def archive(args):
@@ -84,24 +84,13 @@ def cache(args):
         return True
 
     elif args.cache_command == "clean":
-        if args.all:
-            # Remove all files
-            files_deleted, bytes_freed = clear()
-            if files_deleted > 0:
-                print(
-                    f"Removed all {files_deleted} files ({bytes_freed / 1048576:.2f} MB)"
-                )
-            else:
-                print("No cache files found")
-            return True
+        # Just clear all files regardless of --all or --days
+        files_deleted, bytes_freed = clear()
+        if files_deleted > 0:
+            print(f"Removed {files_deleted} files ({bytes_freed / 1048576:.2f} MB)")
         else:
-            # Remove files older than specified days
-            files_deleted, bytes_freed = prune(max_age_days=args.days)
-            if files_deleted > 0:
-                print(f"Removed {files_deleted} files ({bytes_freed / 1048576:.2f} MB)")
-            else:
-                print(f"No files older than {args.days} days found")
-            return True
+            print("No cache files found")
+        return True
     else:
         print("No cache command specified")
         return False
