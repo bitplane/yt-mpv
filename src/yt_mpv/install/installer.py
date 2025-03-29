@@ -108,7 +108,7 @@ class Installer:
 
 # Activate virtualenv and launch
 source "{self.venv_dir}/bin/activate"
-python -m yt_mpv.cli launch "$@"
+python -m yt_mpv launch "$@"
 """
         try:
             with open(self.launcher_path, "w") as f:
