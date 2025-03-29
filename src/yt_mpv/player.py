@@ -7,31 +7,20 @@ import os
 import shutil
 from pathlib import Path
 
-from yt_mpv.utils.system import notify, run_command
+from yt_mpv.utils.fs import run_command
+from yt_mpv.utils.notify import notify
 
 # Configure logging
 logger = logging.getLogger("yt-mpv")
 
 
 def check_mpv_installed() -> bool:
-    """Check if mpv is installed.
-
-    Returns:
-        bool: True if mpv is installed, False otherwise
-    """
+    """Check if mpv is installed."""
     return shutil.which("mpv") is not None
 
 
 def play_video(url: str, additional_mpv_args: list = None) -> bool:
-    """Play a video with mpv.
-
-    Args:
-        url: URL to play
-        additional_mpv_args: Additional arguments to pass to mpv
-
-    Returns:
-        bool: True if successful, False otherwise
-    """
+    """Play a video with mpv."""
     if not check_mpv_installed():
         logger.error("mpv is not installed")
         notify("mpv not found. Please install it.")
@@ -63,15 +52,7 @@ def play_video(url: str, additional_mpv_args: list = None) -> bool:
 
 
 def update_yt_dlp(venv_dir: Path, venv_bin: Path) -> bool:
-    """Update yt-dlp using uv if available.
-
-    Args:
-        venv_dir: Path to virtual environment
-        venv_bin: Path to virtual environment bin directory
-
-    Returns:
-        bool: True if successful, False otherwise
-    """
+    """Update yt-dlp using uv if available."""
     try:
         # Prepare environment with venv
         env = os.environ.copy()

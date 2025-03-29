@@ -16,14 +16,7 @@ DL_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def get_config_path(config_name=None):
-    """Get path to a configuration file or directory.
-
-    Args:
-        config_name: Optional name of config file
-
-    Returns:
-        Path: Path to the config file or directory
-    """
+    """Get path to a configuration file or directory."""
     config_dir = HOME / ".config/yt-mpv"
     config_dir.mkdir(parents=True, exist_ok=True)
 

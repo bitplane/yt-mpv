@@ -5,16 +5,15 @@ Launcher for yt-mpv: Play videos with mpv, then optionally upload to Internet Ar
 import logging
 import os
 import random
-import re
 import sys
 import urllib.parse
 
-# Import functionality from separated modules
-from yt_mpv.archive.checker import check_archive_status
-from yt_mpv.core.archive import archive_url
-from yt_mpv.core.player import check_mpv_installed, play_video, update_yt_dlp
-from yt_mpv.utils.cache import purge_cache
+# Import functionality
+from yt_mpv.archive.archive_org import check_archive_status
+from yt_mpv.archive.yt_dlp import archive_url
+from yt_mpv.player import check_mpv_installed, play_video, update_yt_dlp
 from yt_mpv.utils.config import DL_DIR, VENV_BIN, VENV_DIR
+from yt_mpv.utils.fs import purge_cache
 from yt_mpv.utils.url import get_real_url, parse_url_params
 
 # Configure logging
@@ -67,7 +66,7 @@ def main():
         should_archive = params.get("archive", "1") == "1"
 
     # Basic URL validation
-    if not re.match(r"^https?://", url):
+    if not url.startswith(("http://", "https://")):
         logger.error(f"Invalid URL format: {url}")
         sys.exit(1)
 

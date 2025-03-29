@@ -7,14 +7,14 @@ import sys
 
 from yt_mpv.cli.args import parse_args
 from yt_mpv.cli.commands import (
-    cmd_archive,
-    cmd_cache,
-    cmd_check,
-    cmd_install,
-    cmd_launch,
-    cmd_play,
-    cmd_remove,
-    cmd_setup,
+    archive,
+    cache,
+    check,
+    install,
+    launch,
+    play,
+    remove,
+    setup,
 )
 
 # Configure logging
@@ -39,14 +39,14 @@ def main():
 
     # Map commands to their handler functions
     command_handlers = {
-        "install": cmd_install,
-        "remove": cmd_remove,
-        "setup": cmd_setup,
-        "launch": cmd_launch,
-        "play": cmd_play,
-        "archive": cmd_archive,
-        "check": cmd_check,
-        "cache": cmd_cache,
+        "install": install,
+        "remove": remove,
+        "setup": setup,
+        "launch": launch,
+        "play": play,
+        "archive": archive,
+        "check": check,
+        "cache": cache,
     }
 
     # Get the handler for the specified command

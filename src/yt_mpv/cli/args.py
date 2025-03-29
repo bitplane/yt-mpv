@@ -6,11 +6,7 @@ import argparse
 
 
 def create_parser():
-    """Create the argument parser for the CLI.
-
-    Returns:
-        argparse.ArgumentParser: Configured argument parser
-    """
+    """Create the argument parser for the CLI."""
     parser = argparse.ArgumentParser(
         description="yt-mpv: Play YouTube videos in MPV while archiving to archive.org"
     )
@@ -89,13 +85,6 @@ def create_parser():
 
 
 def parse_args(args=None):
-    """Parse command line arguments.
-
-    Args:
-        args: Command line arguments to parse (defaults to sys.argv)
-
-    Returns:
-        argparse.Namespace: Parsed arguments
-    """
+    """Parse command line arguments."""
     parser = create_parser()
     return parser.parse_args(args)

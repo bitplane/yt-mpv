@@ -5,43 +5,33 @@ Command implementations for yt-mpv CLI
 import logging
 import sys
 
-# Import functionality from other modules - paths will be updated
-# when the modules are created
-from yt_mpv.archive.checker import check_archive_status
-from yt_mpv.core.archive import archive_url
-from yt_mpv.core.launcher import main as launch_main
-from yt_mpv.core.player import play_video, update_yt_dlp
-from yt_mpv.install.installer import Installer
-from yt_mpv.utils.cache import clean_all_cache, format_cache_info, purge_cache
+from yt_mpv.archive.archive_org import check_archive_status
+from yt_mpv.archive.yt_dlp import archive_url
+from yt_mpv.install.setup import install_app, remove_app, setup_app
+from yt_mpv.launcher import main as launch_main
+from yt_mpv.player import play_video, update_yt_dlp
 from yt_mpv.utils.config import DL_DIR, VENV_BIN, VENV_DIR
+from yt_mpv.utils.fs import clean_all_cache, format_cache_info, purge_cache
 
 logger = logging.getLogger("yt-mpv")
 
 
-def cmd_install(args):
+def install(args):
     """Install command implementation."""
-    installer = Installer(args.prefix)
-    success = installer.install()
-    if success:
-        # Run setup after successful installation
-        setup_success = installer.setup()
-        return setup_success
-    return False
+    return install_app(args.prefix)
 
 
-def cmd_remove(args):
+def remove(args):
     """Remove command implementation."""
-    installer = Installer(args.prefix)
-    return installer.remove()
+    return remove_app(args.prefix)
 
 
-def cmd_setup(args):
+def setup(args):
     """Setup command implementation."""
-    installer = Installer(args.prefix)
-    return installer.setup()
+    return setup_app(args.prefix)
 
 
-def cmd_launch(args):
+def launch(args):
     """Launch command implementation."""
     # Pass the URL to the launch script
     sys.argv = [sys.argv[0], args.url]
@@ -49,7 +39,7 @@ def cmd_launch(args):
     return True
 
 
-def cmd_play(args):
+def play(args):
     """Play command implementation."""
     # Update yt-dlp if requested
     if args.update_ytdlp:
@@ -62,7 +52,7 @@ def cmd_play(args):
     return play_video(args.url, mpv_args)
 
 
-def cmd_archive(args):
+def archive(args):
     """Archive command implementation."""
     # Update yt-dlp if requested
     if args.update_ytdlp:
@@ -72,7 +62,7 @@ def cmd_archive(args):
     return archive_url(args.url, DL_DIR, VENV_BIN)
 
 
-def cmd_check(args):
+def check(args):
     """Check command implementation."""
     result = check_archive_status(args.url)
     if result:
@@ -83,16 +73,16 @@ def cmd_check(args):
         return False
 
 
-def cmd_cache(args):
+def cache(args):
     """Cache command implementation."""
     if args.cache_command == "info":
-        # Show cache information using the formatted output
+        # Show cache information
         print(format_cache_info())
         return True
 
     elif args.cache_command == "clean":
         if args.all:
-            # Remove all files using the dedicated function
+            # Remove all files
             files_deleted, bytes_freed = clean_all_cache()
             if files_deleted > 0:
                 print(

@@ -12,11 +12,7 @@ logger = logging.getLogger("yt-mpv")
 
 
 def get_bookmark_html_path():
-    """Get the path to the bookmark.html file.
-
-    Returns:
-        Path: Path to the bookmark.html file
-    """
+    """Get the path to the bookmark.html file."""
     try:
         # For Python 3.9+
         from importlib.resources import files
@@ -32,11 +28,7 @@ def get_bookmark_html_path():
 
 
 def get_bookmarklet_js():
-    """Get the JavaScript bookmarklet code.
-
-    Returns:
-        tuple: (play_only_js, play_archive_js)
-    """
+    """Get the JavaScript bookmarklet code."""
     play_only_js = (
         "javascript:(function(){var originalUrl = encodeURIComponent(window.location.href); "
         "window.location.href = 'x-yt-mpv:/?url=' + originalUrl + '&archive=0';})()"

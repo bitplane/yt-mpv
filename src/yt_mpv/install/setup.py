@@ -1,115 +1,198 @@
 """
-Post-installation setup for yt-mpv
+Installation setup for yt-mpv
 """
 
 import logging
+import os
+import shutil
 import subprocess
+import sys
 from pathlib import Path
 
+from yt_mpv.archive.archive_org import configure as configure_ia
 from yt_mpv.install.bookmarklet import open_bookmarklet
-from yt_mpv.utils.system import run_command
+from yt_mpv.install.desktop import setup_desktop_entry
+from yt_mpv.utils.fs import run_command
 
-# Configure logging
 logger = logging.getLogger("yt-mpv")
 
 
-def configure_ia(venv_bin: Path) -> bool:
-    """Configure Internet Archive credentials.
+def install_app(prefix=None):
+    """Install yt-mpv.
 
     Args:
-        venv_bin: Path to virtual environment bin directory
+        prefix: Installation prefix (defaults to $HOME/.local)
 
     Returns:
         bool: True if successful, False otherwise
     """
+    # Set up paths
     home = Path.home()
-    ia_config = home / ".config" / "ia.ini"
-    ia_config_alt = home / ".config" / "internetarchive" / "ia.ini"
+    prefix = Path(prefix) if prefix else home / ".local"
+    bin_dir = prefix / "bin"
+    share_dir = prefix / "share" / "yt-mpv"
+    venv_dir = share_dir / ".venv"
+    app_dir = prefix / "share" / "applications"
+    launcher_path = bin_dir / "yt-mpv"
 
-    # Check if already configured
-    if ia_config.exists() or ia_config_alt.exists():
-        logger.info("Internet Archive already configured")
-        return True
+    print(f"Installing yt-mpv to {prefix}...")
 
-    # Ensure config directory exists
-    if not ia_config.parent.exists():
-        ia_config.parent.mkdir(parents=True, exist_ok=True)
+    # Create necessary directories
+    for d in [bin_dir, share_dir, app_dir, venv_dir.parent]:
+        d.mkdir(parents=True, exist_ok=True)
 
-    # Run ia configure command
-    logger.info("Setting up Internet Archive credentials...")
-    venv_ia = venv_bin / "ia"
+    # Create virtualenv using current Python interpreter
+    if not (venv_dir / "bin" / "python").exists():
+        print(f"Creating virtualenv at {venv_dir}")
+        try:
+            run_command([sys.executable, "-m", "venv", str(venv_dir)])
+        except Exception as e:
+            print(f"Failed to create virtualenv: {e}")
+            return False
 
+    # Get dependencies
+    venv_pip = venv_dir / "bin" / "pip"
+
+    # Setup environment to ensure we're using the venv
+    env = os.environ.copy()
+    env["VIRTUAL_ENV"] = str(venv_dir)
+    env["PATH"] = f"{venv_dir}/bin:{env.get('PATH', '')}"
+
+    # Install core dependencies
     try:
-        run_command([str(venv_ia), "configure"])
-        return True
-    except subprocess.SubprocessError as e:
-        logger.error(f"Failed to configure Internet Archive: {e}")
-        print("Please run manually:")
-        print(f"{venv_ia} configure")
+        run_command([str(venv_pip), "install", "-U", "pip"], env=env)
+        run_command(
+            [str(venv_pip), "install", "-U", "yt-dlp", "internetarchive", "uv"],
+            env=env,
+        )
+
+        # Try to use freeze_one for deterministic deps if available
+        try:
+            from freeze_one import freeze_one
+
+            frozen_deps = freeze_one("yt_mpv")
+            run_command([str(venv_pip), "install", frozen_deps], env=env)
+        except (ImportError, AttributeError):
+            # Fall back to installing the package directly
+            run_command([str(venv_pip), "install", "-e", "."], env=env)
+
+    except Exception as e:
+        print(f"Failed to install dependencies: {e}")
         return False
 
+    # Write launcher script
+    launcher_content = f"""#!/bin/bash
+# Launcher for yt-mpv
 
-def setup_desktop_entry(launcher_path: Path, desktop_path: Path) -> bool:
-    """Set up desktop entry for URI handler.
+# Activate virtualenv and launch
+source "{venv_dir}/bin/activate"
+python -m yt_mpv launch "$@"
+"""
+    try:
+        with open(launcher_path, "w") as f:
+            f.write(launcher_content)
+        launcher_path.chmod(0o755)  # Make executable
+        print(f"Created launcher at {launcher_path}")
+    except Exception as e:
+        print(f"Failed to create launcher script: {e}")
+        return False
+
+    # Setup desktop file
+    if not setup_desktop_entry(
+        launcher_path, prefix / "share" / "applications" / "yt-mpv.desktop"
+    ):
+        print(
+            "Warning: Could not set up desktop integration. URI handler may not work."
+        )
+
+    print(f"yt-mpv installed successfully to {prefix}")
+
+    # Run setup after successful installation
+    setup_success = setup_app(prefix)
+    return setup_success
+
+
+def setup_app(prefix=None):
+    """Configure yt-mpv post-installation.
 
     Args:
-        launcher_path: Path to launcher script
-        desktop_path: Path to desktop file
+        prefix: Installation prefix (defaults to $HOME/.local)
 
     Returns:
         bool: True if successful, False otherwise
     """
-    # Ensure parent directory exists
-    desktop_path.parent.mkdir(parents=True, exist_ok=True)
+    print("Setting up yt-mpv...")
 
-    # Read template desktop file
-    try:
-        from importlib.resources import files
+    # Set up paths
+    home = Path.home()
+    prefix = Path(prefix) if prefix else home / ".local"
 
-        template_path = files("yt_mpv.install.resources").joinpath("yt-mpv.desktop")
-        with open(template_path, "r") as f:
-            desktop_content = f.read()
-    except (ImportError, AttributeError):
-        # Fallback for earlier Python versions
-        import pkg_resources
-
-        template_path = pkg_resources.resource_filename(
-            "yt_mpv", "install/resources/yt-mpv.desktop"
-        )
-        with open(template_path, "r") as f:
-            desktop_content = f.read()
-
-    # Replace placeholder with actual launcher path
-    desktop_content = desktop_content.replace("${INSTALL_PATH}", str(launcher_path))
-
-    # Write desktop file
-    try:
-        with open(desktop_path, "w") as f:
-            f.write(desktop_content)
-
-        logger.info(f"Created desktop entry at {desktop_path}")
-
-        # Update desktop database and MIME types
-        for cmd in [
-            ["xdg-mime", "default", "yt-mpv.desktop", "x-scheme-handler/x-yt-mpv"],
-            ["xdg-mime", "default", "yt-mpv.desktop", "x-scheme-handler/x-yt-mpvs"],
-            ["update-desktop-database", str(desktop_path.parent)],
-        ]:
-            try:
-                run_command(cmd, check=False)
-            except (subprocess.SubprocessError, FileNotFoundError):
-                logger.warning(f"Could not run {cmd[0]}")
-
-        return True
-    except Exception as e:
-        logger.error(f"Failed to create desktop entry: {e}")
+    # Check for mpv
+    if not shutil.which("mpv"):
+        print("WARNING: mpv not found in PATH. Please install it.")
         return False
 
+    # Configure Internet Archive
+    if not configure_ia():
+        print("WARNING: Could not configure Internet Archive.")
 
-def setup_bookmarklet() -> bool:
-    """Set up bookmarklet in browser.
+    # Open bookmarklet HTML in browser
+    if not open_bookmarklet():
+        print("WARNING: Could not open bookmarklet page.")
+
+    print("Setup complete!")
+    return True
+
+
+def remove_app(prefix=None):
+    """Uninstall yt-mpv.
+
+    Args:
+        prefix: Installation prefix (defaults to $HOME/.local)
 
     Returns:
         bool: True if successful, False otherwise
     """
-    return open_bookmarklet()
+    # Set up paths
+    home = Path.home()
+    prefix = Path(prefix) if prefix else home / ".local"
+    bin_dir = prefix / "bin"
+    share_dir = prefix / "share" / "yt-mpv"
+    app_dir = prefix / "share" / "applications"
+    launcher_path = bin_dir / "yt-mpv"
+    desktop_path = app_dir / "yt-mpv.desktop"
+
+    print(f"Removing yt-mpv from {prefix}...")
+
+    # Remove desktop file
+    if desktop_path.exists():
+        try:
+            desktop_path.unlink()
+            print(f"Removed {desktop_path}")
+        except Exception as e:
+            print(f"Could not remove desktop file: {e}")
+
+    # Remove launcher
+    if launcher_path.exists():
+        try:
+            launcher_path.unlink()
+            print(f"Removed {launcher_path}")
+        except Exception as e:
+            print(f"Could not remove launcher: {e}")
+
+    # Remove share directory
+    if share_dir.exists():
+        try:
+            shutil.rmtree(share_dir)
+            print(f"Removed {share_dir}")
+        except Exception as e:
+            print(f"Could not remove share directory: {e}")
+
+    # Update desktop database
+    try:
+        run_command(["update-desktop-database", str(app_dir)], check=False)
+    except (subprocess.SubprocessError, FileNotFoundError):
+        pass
+
+    print("yt-mpv removed successfully.")
+    return True
