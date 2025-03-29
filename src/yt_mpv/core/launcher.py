@@ -7,6 +7,7 @@ import os
 import random
 import re
 import sys
+import urllib.parse
 
 # Import functionality from separated modules
 from yt_mpv.archive.checker import check_archive_status
@@ -54,8 +55,11 @@ def main():
 
     # Handle the new style bookmarklet format with URL parameter
     if "url" in params:
-        url = params["url"]
+        # Decode the URL parameter since it's URL-encoded
+        url = urllib.parse.unquote(params["url"])
+        # Explicitly check for the archive parameter
         should_archive = params.get("archive", "1") == "1"
+        logger.info(f"Parsed URL: {url}, archive setting: {should_archive}")
     else:
         # Handle legacy URL format
         url = get_real_url(raw_url)

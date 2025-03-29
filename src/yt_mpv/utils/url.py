@@ -20,8 +20,8 @@ def get_real_url(raw_url: str) -> str:
     # Handle potential URL parameter case
     params = parse_url_params(raw_url)
     if "url" in params:
-        # If we have a URL parameter, return that directly
-        return params["url"]
+        # If we have a URL parameter, decode and return it
+        return urllib.parse.unquote(params["url"])
 
     # Otherwise, replace scheme if needed
     if raw_url.startswith("x-yt-mpvs:"):
@@ -68,6 +68,20 @@ def parse_url_params(url: str) -> Dict[str, str]:
         Dict[str, str]: Dictionary of parameters
     """
     parsed_params = {}
+
+    # For x-yt-mpv protocol, handle URL format properly
+    if url.startswith("x-yt-mpv://") or url.startswith("x-yt-mpvs://"):
+        # Get the query part after the protocol and host
+        parts = url.split("//", 1)
+        if len(parts) > 1 and "?" in parts[1]:
+            query_string = parts[1].split("?", 1)[1]
+            params = urllib.parse.parse_qs(query_string, keep_blank_values=True)
+            for key, values in params.items():
+                if values:
+                    parsed_params[key] = values[0]
+                else:
+                    parsed_params[key] = ""
+        return parsed_params
 
     # Check if URL has parameters
     if "?" in url:
