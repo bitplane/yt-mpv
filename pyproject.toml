@@ -6,17 +6,16 @@ readme = "README.md"
 authors = [
     { name = "Gareth Davidson", email = "gaz@bitplane.net" }
 ]
-
-[project.urls]
-Homepage = "https://bitplane.net/dev/python/yt-mpv"
-"Bug Tracker" = "https://github.com/bitplane/yt-mpv/issues"
-"Source Code" = "https://github.com/bitplane/yt-mpv"
-
 dependencies = [
     "uv",
     "internetarchive",
     "freeze_one~=0.2"
 ]
+
+[project.urls]
+Homepage = "https://bitplane.net/dev/python/yt-mpv"
+"Bug Tracker" = "https://github.com/bitplane/yt-mpv/issues"
+"Source Code" = "https://github.com/bitplane/yt-mpv"
 
 [project.optional-dependencies]
 dev = [
