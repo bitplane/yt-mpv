@@ -48,17 +48,8 @@ def open_browser():
         # Get the HTML file content
         html_path = get_path()
 
-        try:
-            with open(html_path, "r", encoding="utf-8") as f:
-                bookmark_content = f.read()
-        except Exception as e:
-            logger.error(f"Could not read bookmark HTML file: {e}")
-            # Fallback to just printing the JavaScript
-            play_only_js, play_archive_js = get_js()
-            print("Please manually create these bookmarks:")
-            print(f"MPV Play: {play_only_js}")
-            print(f"MPV Play+Archive: {play_archive_js}")
-            return False
+        with open(html_path, "r", encoding="utf-8") as f:
+            bookmark_content = f.read()
 
         # Encode the HTML content as a data URI
         encoded_content = base64.b64encode(bookmark_content.encode()).decode()
