@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 
 from yt_mpv.archive.archive_org import configure as configure_ia
-from yt_mpv.install.bookmarklet import open as open_bookmarklet
+from yt_mpv.install.bookmarklet import open_browser
 from yt_mpv.install.desktop import setup_desktop_entry
 from yt_mpv.utils.fs import run_command
 
@@ -137,7 +137,7 @@ def configure(prefix=None):
         print("WARNING: Could not configure Internet Archive.")
 
     # Open bookmarklet HTML in browser
-    if not open_bookmarklet():
+    if not open_browser():
         print("WARNING: Could not open bookmarklet page.")
 
     print("Setup complete!")

@@ -42,14 +42,14 @@ def get_js():
     return (play_only_js, play_archive_js)
 
 
-def open():
+def open_browser():
     """Open the bookmarklet HTML in a browser using a data URI."""
     try:
         # Get the HTML file content
         html_path = get_path()
 
         try:
-            with open(html_path) as f:
+            with open(html_path, "r", encoding="utf-8") as f:
                 bookmark_content = f.read()
         except Exception as e:
             logger.error(f"Could not read bookmark HTML file: {e}")
