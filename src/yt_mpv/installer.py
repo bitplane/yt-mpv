@@ -7,7 +7,6 @@ import shutil
 import subprocess
 import sys
 import webbrowser
-from importlib import resources
 from pathlib import Path
 
 from freeze_one import freeze_one
@@ -152,13 +151,25 @@ MimeType=x-scheme-handler/x-yt-mpv;x-scheme-handler/x-yt-mpvs;
     def open_bookmarklet(self):
         """Open the bookmarklet HTML in a browser."""
         try:
-            # Try using importlib.resources first (modern approach)
+            import shutil
+            from pathlib import Path
+
+            # Use the cache directory to store the bookmarklet HTML
+            cache_dir = Path.home() / ".cache/yt-mpv"
+            cache_dir.mkdir(parents=True, exist_ok=True)
+
+            # Path for the copied bookmarklet HTML
+            dest_path = cache_dir / "bookmarklet.html"
+
+            # Find and copy the original bookmarklet HTML
             try:
                 # For Python 3.9+
+                from importlib import resources
+
                 bookmark_path = resources.files("yt_mpv.install").joinpath(
                     "bookmark.html"
                 )
-                bookmarklet_path = bookmark_path
+                shutil.copy(bookmark_path, dest_path)
             except (AttributeError, ImportError):
                 # Fallback for earlier Python versions
                 import pkg_resources
@@ -166,9 +177,14 @@ MimeType=x-scheme-handler/x-yt-mpv;x-scheme-handler/x-yt-mpvs;
                 bookmarklet_path = pkg_resources.resource_filename(
                     "yt_mpv", "install/bookmark.html"
                 )
+                shutil.copy(bookmarklet_path, dest_path)
 
-            print(f"Opening bookmarklet page at {bookmarklet_path}")
-            webbrowser.open(f"file://{bookmarklet_path}")
+            dest_path.chmod(0o644)
+
+            print(f"Opening bookmarklet page at {dest_path}")
+
+            webbrowser.open(f"file://{dest_path}")
+
         except Exception as e:
             print(f"Could not open bookmarklet HTML: {e}")
 
