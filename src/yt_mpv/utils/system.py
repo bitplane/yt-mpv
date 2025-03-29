@@ -27,13 +27,16 @@ def notify(message: str) -> None:
         logger.debug(f"Could not send notification: {message}")
 
 
-def run_command(cmd: list, desc: str = "", check: bool = True) -> Tuple[int, str, str]:
+def run_command(
+    cmd: list, desc: str = "", check: bool = True, env=None
+) -> Tuple[int, str, str]:
     """Run a command and return status, stdout, stderr.
 
     Args:
         cmd: Command to run as a list of arguments
         desc: Description of the command for logging
         check: Whether to raise an exception if command fails
+        env: Environment variables for the command
 
     Returns:
         Tuple[int, str, str]: return code, stdout, stderr
@@ -42,7 +45,7 @@ def run_command(cmd: list, desc: str = "", check: bool = True) -> Tuple[int, str
         if desc:
             logger.info(desc)
 
-        proc = subprocess.run(cmd, check=check, text=True, capture_output=True)
+        proc = subprocess.run(cmd, check=check, text=True, capture_output=True, env=env)
         return proc.returncode, proc.stdout, proc.stderr
     except subprocess.SubprocessError as e:
         logger.error(f"Command failed: {e}")
