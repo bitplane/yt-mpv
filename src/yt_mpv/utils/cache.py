@@ -5,7 +5,6 @@ Cache management functions for yt-mpv
 import logging
 import time
 from pathlib import Path
-from typing import list, tuple
 
 from yt_mpv.utils.config import DL_DIR
 
