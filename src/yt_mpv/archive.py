@@ -182,21 +182,63 @@ def download_video(
     # Use yt-dlp to download the video
     try:
         logger.info("Downloading video for archiving")
+
+        # First attempt with best quality
         cmd = [
             str(venv_bin / "yt-dlp"),
             "-f",
             "bestvideo*+bestaudio/best",
             "--write-info-json",
+            "-v",  # Verbose output to help diagnose issues
             "-o",
             output_pattern,
             url,
         ]
 
-        return_code, stdout, stderr = run_command(cmd, check=True)
+        return_code, stdout, stderr = run_command(
+            cmd, check=False
+        )  # Don't raise exception on failure
 
+        # If the first attempt failed, try with a simpler format selection
         if return_code != 0:
-            logger.error(f"Download failed: {stderr}")
-            notify("Download failed")
+            logger.warning(f"First download attempt failed: {stderr}")
+            logger.info("Trying with simpler format selection...")
+
+            cmd = [
+                str(venv_bin / "yt-dlp"),
+                "-f",
+                "best",  # Simpler format selection
+                "--write-info-json",
+                "-v",
+                "-o",
+                output_pattern,
+                url,
+            ]
+
+            return_code, stdout, stderr = run_command(cmd, check=False)
+
+            # If still failing, try one more time with format 18 (360p) which is usually available
+            if return_code != 0:
+                logger.warning(f"Second download attempt failed: {stderr}")
+                logger.info("Trying with basic format selection...")
+
+                cmd = [
+                    str(venv_bin / "yt-dlp"),
+                    "-f",
+                    "18/best[height<=480]",  # Most compatible format
+                    "--write-info-json",
+                    "-v",
+                    "-o",
+                    output_pattern,
+                    url,
+                ]
+
+                return_code, stdout, stderr = run_command(cmd, check=False)
+
+        # If all attempts failed
+        if return_code != 0:
+            logger.error(f"All download attempts failed. Last error: {stderr}")
+            notify("Download failed - yt-dlp error")
             return None
 
         # Find the info file
@@ -233,6 +275,28 @@ def download_video(
                 if file.suffix != ".info.json" and file.exists():
                     video_file = file
                     break
+
+        # If still not found, look for any recently created video files
+        if not video_file:
+            logger.info("Trying to find recently created video file...")
+            import time
+
+            now = time.time()
+            recent_files = []
+
+            for file in dl_dir.iterdir():
+                if file.is_file() and file.suffix != ".info.json":
+                    file_age = now - file.stat().st_mtime
+                    # Look for files created in the last 5 minutes
+                    if file_age < 300:
+                        recent_files.append((file, file_age))
+
+            # Sort by age (newest first)
+            recent_files.sort(key=lambda x: x[1])
+
+            if recent_files:
+                video_file = recent_files[0][0]
+                logger.info(f"Found recent file: {video_file}")
 
         if not video_file or not video_file.exists():
             logger.error(f"Video file not found for: yt-mpv-{extractor}-{video_id}.*")
