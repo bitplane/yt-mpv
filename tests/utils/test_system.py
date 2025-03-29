@@ -29,7 +29,8 @@ def test_generate_archive_id():
     assert archive_id != archive_id2
 
     # Test default username (mocked to avoid using actual login)
-    with patch("os.getlogin", return_value="defaultuser"):
+    # The patching needs to happen at the module level since that's where getlogin is used
+    with patch("yt_mpv.utils.system.os.getlogin", return_value="defaultuser"):
         archive_id3 = generate_archive_id(url)
         assert "defaultuser" in archive_id3
 
@@ -44,3 +45,5 @@ def test_run_command():
 
     # Test command with error
     status, stdout, stderr = run_command(["ls", "/nonexistent"], check=False)
+    assert status != 0
+    assert stderr != ""

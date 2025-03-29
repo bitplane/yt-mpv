@@ -124,6 +124,43 @@ def upload_to_archive(video_file: Path, info_file: Path, url: str) -> bool:
         return False
 
 
+def try_download_format(
+    url: str, output_pattern: str, venv_bin: Path, format_spec: str, desc: str = ""
+) -> Tuple[int, str, str]:
+    """Try to download a video with a specific format specification.
+
+    Args:
+        url: URL to download
+        output_pattern: Output pattern for yt-dlp
+        venv_bin: Path to virtualenv bin directory
+        format_spec: Format specification for yt-dlp
+        desc: Description of the format for logging
+
+    Returns:
+        Tuple[int, str, str]: return code, stdout, stderr
+    """
+    if desc:
+        logger.info(f"Trying with {desc} format...")
+
+    cmd = [
+        str(venv_bin / "yt-dlp"),
+        "-f",
+        format_spec,
+        "--no-check-certificate",
+        "--write-info-json",
+        "--print",
+        "filename",  # Explicitly print the filename
+        "-v",
+        "--no-part",
+        "--force-overwrites",
+        "-o",
+        output_pattern,
+        url,
+    ]
+
+    return run_command(cmd, check=False)
+
+
 def download_video(
     url: str, dl_dir: Path, venv_bin: Path
 ) -> Optional[Tuple[Path, Path]]:
@@ -146,184 +183,138 @@ def download_video(
     # Define expected output pattern
     output_pattern = f"{dl_dir}/yt-mpv-%(extractor)s-%(id)s.%(ext)s"
 
-    # Use yt-dlp to download the video
-    try:
-        logger.info("Downloading video for archiving")
+    # Define download formats to try in order of preference
+    download_formats = [
+        ("b[ext=mp4]", "single file mp4"),
+        ("22/best[height<=720][ext=mp4]", "720p mp4"),
+        ("18", "360p mp4 (format 18)"),
+        ("worst", "lowest quality"),
+    ]
 
-        # First attempt with single file format (no need to merge)
-        cmd = [
-            str(venv_bin / "yt-dlp"),
-            "-f",
-            "b[ext=mp4]",  # Single file mp4 format, no separate audio/video that needs merging
-            "--no-check-certificate",  # Bypass certificate verification for compatibility
-            "--write-info-json",
-            "-v",  # Verbose output to help diagnose issues
-            "--no-part",  # Don't use .part files
-            "--force-overwrites",  # Overwrite existing files
-            "-o",
-            output_pattern,
-            url,
-        ]
+    # Try each format in order until one succeeds
+    video_file = None
+    for format_spec, desc in download_formats:
+        return_code, stdout, stderr = try_download_format(
+            url, output_pattern, venv_bin, format_spec, desc
+        )
 
-        return_code, stdout, stderr = run_command(cmd, check=False)
+        if return_code == 0:
+            # Look for printed filename in stdout
+            for line in stdout.splitlines():
+                if line and not line.startswith("[") and dl_dir.name in line:
+                    potential_file = Path(line.strip())
+                    if (
+                        potential_file.exists()
+                        and potential_file.suffix != ".info.json"
+                    ):
+                        video_file = potential_file
+                        break
+            if video_file:
+                break
+        else:
+            logger.warning(f"Download attempt with {desc} format failed: {stderr}")
 
-        # If the first attempt failed, try with 720p mp4 format
-        if return_code != 0:
-            logger.warning(f"First download attempt failed: {stderr}")
-            logger.info("Trying with 720p mp4 format...")
+    # If all attempts failed
+    if not video_file:
+        logger.error("All download attempts failed")
+        notify("Download failed - yt-dlp error")
+        return None
 
-            cmd = [
-                str(venv_bin / "yt-dlp"),
-                "-f",
-                "22/best[height<=720][ext=mp4]",  # Try format 22 (720p MP4) or similar
-                "--no-check-certificate",
-                "--write-info-json",
-                "-v",
-                "--no-part",
-                "--force-overwrites",
-                "-o",
-                output_pattern,
-                url,
-            ]
-
-            return_code, stdout, stderr = run_command(cmd, check=False)
-
-            # If still failing, try with format 18 (360p) which is usually available
-            if return_code != 0:
-                logger.warning(f"Second download attempt failed: {stderr}")
-                logger.info("Trying with 360p format...")
-
-                cmd = [
-                    str(venv_bin / "yt-dlp"),
-                    "-f",
-                    "18",  # Format 18 is 360p MP4, very widely available
-                    "--no-check-certificate",
-                    "--write-info-json",
-                    "-v",
-                    "--no-part",
-                    "--force-overwrites",
-                    "-o",
-                    output_pattern,
-                    url,
-                ]
-
-                return_code, stdout, stderr = run_command(cmd, check=False)
-
-                # Last resort - try with very low quality but reliable format
-                if return_code != 0:
-                    logger.warning(f"Third download attempt failed: {stderr}")
-                    logger.info("Trying with lowest quality format...")
-
-                    cmd = [
-                        str(venv_bin / "yt-dlp"),
-                        "-f",
-                        "worst",  # Last resort - lowest quality but likely to work
-                        "--no-check-certificate",
-                        "--write-info-json",
-                        "-v",
-                        "--no-part",
-                        "--force-overwrites",
-                        "-o",
-                        output_pattern,
-                        url,
-                    ]
-
-                    return_code, stdout, stderr = run_command(cmd, check=False)
-
-        # If all attempts failed
-        if return_code != 0:
-            logger.error(f"All download attempts failed. Last error: {stderr}")
-            notify("Download failed - yt-dlp error")
-            return None
-
-        # Find the info file
-        info_file = dl_dir / f"yt-mpv-{extractor}-{video_id}.info.json"
-        if not info_file.exists():
+    # Find the info file
+    info_file = dl_dir / f"yt-mpv-{extractor}-{video_id}.info.json"
+    if not info_file.exists():
+        # Try to find any matching info file if the exact name isn't found
+        potential_info_files = list(dl_dir.glob(f"*{video_id}*.info.json"))
+        if potential_info_files:
+            info_file = potential_info_files[0]
+        else:
             logger.error(f"Info file not found at expected path: {info_file}")
             notify("Download appears incomplete - info file missing")
             return None
 
-        # Find the video file - need to identify the extension from yt-dlp output
-        # or check the files in the directory matching the pattern
-        video_file = None
+    return video_file, info_file
 
-        # Try to parse the output to find the filename
-        destination_line = None
-        if stdout:
-            # Look for the last "[download] Destination:" line which contains the full path
-            for line in stdout.splitlines():
-                if (
-                    "[download] Destination:" in line
-                    and f"yt-mpv-{extractor}-{video_id}." in line
-                ):
-                    destination_line = line
 
-            if destination_line:
-                potential_path = destination_line.split("Destination:", 1)[1].strip()
-                potential_file = Path(potential_path)
-                if potential_file.exists() and potential_file.suffix != ".info.json":
-                    video_file = potential_file
+def find_video_file(
+    dl_dir: Path, extractor: str, video_id: str, stdout: str
+) -> Optional[Path]:
+    """Find the downloaded video file using various methods.
 
-        # If we couldn't find it in the output, look for "Merging" line
-        if not video_file and stdout:
-            for line in stdout.splitlines():
-                if (
-                    "[Merger] Merging formats into" in line
-                    and f"yt-mpv-{extractor}-{video_id}." in line
-                ):
-                    potential_path = line.split("into ", 1)[1].strip().strip('"')
-                    potential_file = Path(potential_path)
-                    if potential_file.exists():
-                        video_file = potential_file
-                        break
+    Args:
+        dl_dir: Download directory
+        extractor: Extractor name (e.g., youtube)
+        video_id: Video ID
+        stdout: stdout from the download command
 
-        # If still not found, search the directory for matching files
-        if not video_file:
-            recent_video_files = []
-            for file in dl_dir.glob(f"yt-mpv-{extractor}-{video_id}.*"):
-                if file.suffix != ".info.json" and file.exists():
-                    # Get file creation/modification time to sort by newest
-                    recent_video_files.append((file, file.stat().st_mtime))
+    Returns:
+        Optional[Path]: Path to the video file if found, None otherwise
+    """
+    # Try to parse the output to find the filename from direct print
+    for line in stdout.splitlines():
+        if line and not line.startswith("[") and dl_dir.name in line:
+            potential_file = Path(line.strip())
+            if potential_file.exists() and potential_file.suffix != ".info.json":
+                return potential_file
 
-            # Sort by modification time (newest first)
-            recent_video_files.sort(key=lambda x: x[1], reverse=True)
+    # Look for the last "[download] Destination:" line
+    destination_line = None
+    for line in stdout.splitlines():
+        if (
+            "[download] Destination:" in line
+            and f"yt-mpv-{extractor}-{video_id}." in line
+        ):
+            destination_line = line
 
-            if recent_video_files:
-                video_file = recent_video_files[0][0]
+    if destination_line:
+        potential_path = destination_line.split("Destination:", 1)[1].strip()
+        potential_file = Path(potential_path)
+        if potential_file.exists() and potential_file.suffix != ".info.json":
+            return potential_file
 
-        # If still not found, look for any recently created video files
-        if not video_file:
-            logger.info("Trying to find recently created video file...")
-            import time
+    # Look for "Merging" line
+    for line in stdout.splitlines():
+        if (
+            "[Merger] Merging formats into" in line
+            and f"yt-mpv-{extractor}-{video_id}." in line
+        ):
+            potential_path = line.split("into ", 1)[1].strip().strip('"')
+            potential_file = Path(potential_path)
+            if potential_file.exists():
+                return potential_file
 
-            now = time.time()
-            recent_files = []
+    # Search the directory for matching files
+    matching_files = []
+    for file in dl_dir.glob(f"yt-mpv-{extractor}-{video_id}.*"):
+        if file.suffix != ".info.json" and file.exists():
+            # Get file modification time to sort by newest
+            matching_files.append((file, file.stat().st_mtime))
 
-            for file in dl_dir.iterdir():
-                if file.is_file() and file.suffix != ".info.json":
-                    file_age = now - file.stat().st_mtime
-                    # Look for files created in the last 5 minutes
-                    if file_age < 300:
-                        recent_files.append((file, file_age))
+    # Sort by modification time (newest first)
+    matching_files.sort(key=lambda x: x[1], reverse=True)
+    if matching_files:
+        return matching_files[0][0]
 
-            # Sort by age (newest first)
-            recent_files.sort(key=lambda x: x[1])
+    # Look for any recently created video files
+    import time
 
-            if recent_files:
-                video_file = recent_files[0][0]
-                logger.info(f"Found recent file: {video_file}")
+    now = time.time()
+    recent_files = []
 
-        if not video_file or not video_file.exists():
-            logger.error(f"Video file not found for: yt-mpv-{extractor}-{video_id}.*")
-            notify("Download appears incomplete - video file missing")
-            return None
+    for file in dl_dir.iterdir():
+        if file.is_file() and file.suffix != ".info.json":
+            file_age = now - file.stat().st_mtime
+            # Look for files created in the last 5 minutes
+            if file_age < 300:
+                recent_files.append((file, file_age))
 
-        return video_file, info_file
+    # Sort by age (newest first)
+    recent_files.sort(key=lambda x: x[1])
+    if recent_files:
+        video_file = recent_files[0][0]
+        logger.info(f"Found recent file: {video_file}")
+        return video_file
 
-    except Exception as e:
-        logger.error(f"Download failed: {e}")
-        notify("Download failed")
-        return None
+    return None
 
 
 def archive_url(url: str, dl_dir: Path, venv_bin: Path) -> bool:
