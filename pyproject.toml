@@ -35,3 +35,7 @@ yt-mpv = "yt_mpv.cli.main:main"
 [build-system]
 build-backend = "flit_core.buildapi"
 requires = ["flit_core >=3.2,<4"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
