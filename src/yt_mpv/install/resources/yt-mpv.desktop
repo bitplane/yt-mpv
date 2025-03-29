@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=YouTube MPV Player & Archiver
+Comment=Play videos in mpv and archive to Internet Archive
+Type=Application
+Exec=${INSTALL_PATH} %u
+Terminal=false
+Categories=Network;Video;
+MimeType=x-scheme-handler/x-yt-mpv;x-scheme-handler/x-yt-mpvs;

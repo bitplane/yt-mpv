@@ -1,10 +1,13 @@
 """
-Utility functions for cache management in yt-mpv
+Cache management functions for yt-mpv
 """
 
 import logging
+import time
 from pathlib import Path
 from typing import List, Optional, Tuple
+
+from yt_mpv.utils.config import DL_DIR
 
 # Configure logging
 logger = logging.getLogger("yt-mpv")
@@ -51,7 +54,7 @@ def get_cache_dir() -> Path:
     Returns:
         Path: The default cache directory path
     """
-    return Path.home() / ".cache/yt-mpv"
+    return DL_DIR
 
 
 def purge_cache(
@@ -77,8 +80,6 @@ def purge_cache(
     if not cache_dir.exists() or not cache_dir.is_dir():
         logger.warning(f"Cache directory does not exist: {cache_dir}")
         return 0, 0
-
-    import time
 
     now = time.time()
     max_age_seconds = max_age_days * 24 * 60 * 60
@@ -174,8 +175,6 @@ def get_cache_info(
 
     if not cache_dir.exists() or not cache_dir.is_dir():
         return 0, 0, []
-
-    import time
 
     now = time.time()
     file_count = 0

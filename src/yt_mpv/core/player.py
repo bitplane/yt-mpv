@@ -7,7 +7,7 @@ import os
 import shutil
 from pathlib import Path
 
-from yt_mpv.utils import notify, run_command
+from yt_mpv.utils.system import notify, run_command
 
 # Configure logging
 logger = logging.getLogger("yt-mpv")
@@ -83,17 +83,17 @@ def update_yt_dlp(venv_dir: Path, venv_bin: Path) -> bool:
         if uv_path.exists():
             logger.info("Updating yt-dlp using uv in venv")
             cmd = [str(uv_path), "pip", "install", "--upgrade", "yt-dlp"]
-            run_command(cmd, check=False)
+            run_command(cmd, check=False, env=env)
         # Then try system uv
         elif shutil.which("uv"):
             logger.info("Updating yt-dlp using system uv")
             cmd = ["uv", "pip", "install", "--upgrade", "yt-dlp"]
-            run_command(cmd, check=False)
+            run_command(cmd, check=False, env=env)
         else:
             # Fall back to pip
             logger.info("Updating yt-dlp using pip")
             cmd = [str(venv_bin / "pip"), "install", "--upgrade", "yt-dlp"]
-            run_command(cmd, check=False)
+            run_command(cmd, check=False, env=env)
         return True
     except Exception as e:
         logger.warning(f"Failed to update yt-dlp: {e}")

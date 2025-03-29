@@ -8,46 +8,13 @@ import os
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
-from yt_mpv.cache import cleanup_cache_files
-from yt_mpv.utils import (
-    extract_video_id,
-    generate_archive_id,
-    notify,
-    run_command,
-)
+from yt_mpv.archive.checker import check_archive_status
+from yt_mpv.utils.cache import cleanup_cache_files
+from yt_mpv.utils.system import generate_archive_id, notify, run_command
+from yt_mpv.utils.url import extract_video_id
 
 # Configure logging
 logger = logging.getLogger("yt-mpv")
-
-
-def check_archive_status(url: str) -> Optional[str]:
-    """Check if a URL has been archived.
-
-    Args:
-        url: The URL to check
-
-    Returns:
-        str: The archive.org URL if found, otherwise None
-    """
-    try:
-        import internetarchive
-
-        # Generate the identifier that would have been used
-        identifier = generate_archive_id(url)
-
-        # Check if item exists
-        item = internetarchive.get_item(identifier)
-        if item.exists:
-            return f"https://archive.org/details/{identifier}"
-        else:
-            return None
-
-    except ImportError:
-        logger.error("internetarchive library not available")
-        return None
-    except Exception as e:
-        logger.error(f"Error checking archive: {e}")
-        return None
 
 
 def extract_metadata(info_file: Path, url: str) -> Dict[str, Any]:
@@ -373,10 +340,10 @@ def archive_url(url: str, dl_dir: Path, venv_bin: Path) -> bool:
         bool: True if successful, False otherwise
     """
     # First check if already archived
-    archive_url = check_archive_status(url)
-    if archive_url:
-        logger.info(f"URL already archived: {archive_url}")
-        notify(f"Already archived: {archive_url}")
+    archive_url_path = check_archive_status(url)
+    if archive_url_path:
+        logger.info(f"URL already archived: {archive_url_path}")
+        notify(f"Already archived: {archive_url_path}")
         return True
 
     # Download video

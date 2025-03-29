@@ -7,13 +7,14 @@ import os
 import random
 import re
 import sys
-import urllib.parse
 
 # Import functionality from separated modules
-from yt_mpv.archive import archive_url, check_archive_status
-from yt_mpv.cache import purge_cache
-from yt_mpv.play import check_mpv_installed, play_video, update_yt_dlp
-from yt_mpv.utils import DL_DIR, VENV_BIN, VENV_DIR, get_real_url
+from yt_mpv.archive.checker import check_archive_status
+from yt_mpv.core.archive import archive_url
+from yt_mpv.core.player import check_mpv_installed, play_video, update_yt_dlp
+from yt_mpv.utils.cache import purge_cache
+from yt_mpv.utils.config import DL_DIR, VENV_BIN, VENV_DIR
+from yt_mpv.utils.url import get_real_url, parse_url_params
 
 # Configure logging
 logging.basicConfig(
@@ -48,16 +49,18 @@ def main():
     # Parse URL
     raw_url = sys.argv[1]
 
-    # Extract url and query parameters
-    if "?" in raw_url:
-        base_url, query = raw_url.split("?", 1)
-        params = urllib.parse.parse_qs(query)
-        should_archive = params.get("archive", ["1"])[0] == "1"
-        url = get_real_url(base_url)
+    # Extract URL and parameters
+    params = parse_url_params(raw_url)
+
+    # Handle the new style bookmarklet format with URL parameter
+    if "url" in params:
+        url = params["url"]
+        should_archive = params.get("archive", "1") == "1"
     else:
+        # Handle legacy URL format
         url = get_real_url(raw_url)
-        # Default to archiving if not specified
-        should_archive = True
+        # Check for archive parameter
+        should_archive = params.get("archive", "1") == "1"
 
     # Basic URL validation
     if not re.match(r"^https?://", url):

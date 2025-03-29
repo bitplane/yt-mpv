@@ -1,4 +1,7 @@
-# yt_mpv/__init__.py
+"""
+yt-mpv: Play YouTube videos in MPV while archiving to archive.org
+"""
+
 try:
     from importlib.metadata import version
 except ImportError:
