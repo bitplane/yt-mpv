@@ -29,34 +29,30 @@ MimeType=x-scheme-handler/x-yt-mpv;x-scheme-handler/x-yt-mpvs;
 """
 
     # Write desktop file
-    try:
-        with open(desktop_path, "w") as f:
-            f.write(desktop_content)
+    with open(desktop_path, "w") as f:
+        f.write(desktop_content)
 
-        logger.info(f"Created desktop entry at {desktop_path}")
+    logger.info(f"Created desktop entry at {desktop_path}")
 
-        # Update desktop database and MIME types
-        for cmd in [
-            [
-                "xdg-mime",
-                "default",
-                f"{desktop_path.name}",
-                "x-scheme-handler/x-yt-mpv",
-            ],
-            [
-                "xdg-mime",
-                "default",
-                f"{desktop_path.name}",
-                "x-scheme-handler/x-yt-mpvs",
-            ],
-            ["update-desktop-database", str(desktop_path.parent)],
-        ]:
-            try:
-                run_command(cmd, check=False)
-            except (subprocess.SubprocessError, FileNotFoundError):
-                logger.warning(f"Could not run {cmd[0]}")
+    # Update desktop database and MIME types
+    for cmd in [
+        [
+            "xdg-mime",
+            "default",
+            f"{desktop_path.name}",
+            "x-scheme-handler/x-yt-mpv",
+        ],
+        [
+            "xdg-mime",
+            "default",
+            f"{desktop_path.name}",
+            "x-scheme-handler/x-yt-mpvs",
+        ],
+        ["update-desktop-database", str(desktop_path.parent)],
+    ]:
+        try:
+            run_command(cmd, check=False)
+        except (subprocess.SubprocessError, FileNotFoundError):
+            logger.warning(f"Could not run {cmd[0]}")
 
-        return True
-    except Exception as e:
-        logger.error(f"Failed to create desktop entry: {e}")
-        return False
+    return True

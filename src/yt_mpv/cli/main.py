@@ -56,15 +56,8 @@ def main():
         sys.exit(1)
 
     # Run the command handler
-    try:
-        success = handler(args)
-        sys.exit(0 if success else 1)
-    except KeyboardInterrupt:
-        logger.info("Operation interrupted by user")
-        sys.exit(130)
-    except Exception as e:
-        logger.error(f"Error: {e}")
-        sys.exit(1)
+    success = handler(args)
+    sys.exit(0 if success else 1)
 
 
 if __name__ == "__main__":

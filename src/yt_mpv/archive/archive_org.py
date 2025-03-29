@@ -40,46 +40,33 @@ def is_archived(url: str) -> str | None:
     except ImportError:
         logger.error("internetarchive library not available")
         return None
-    except Exception as e:
-        logger.error(f"Error checking archive: {e}")
-        return None
 
 
 def prepare_metadata(info_file: Path, url: str) -> dict[str, any]:
     """Extract and prepare metadata from yt-dlp's info.json file for upload."""
     # Load metadata from yt-dlp's info.json
-    try:
-        with open(info_file, "r") as f:
-            data = json.load(f)
+    with open(info_file, "r") as f:
+        data = json.load(f)
 
-        # Extract metadata
-        title = data.get("title", "Untitled Video")
-        description = data.get("description") or ""
-        tags = data.get("tags") or data.get("categories") or []
-        creator = data.get("uploader") or data.get("channel") or ""
-        source = data.get("webpage_url") or url
+    # Extract metadata
+    title = data.get("title", "Untitled Video")
+    description = data.get("description") or ""
+    tags = data.get("tags") or data.get("categories") or []
+    creator = data.get("uploader") or data.get("channel") or ""
+    source = data.get("webpage_url") or url
 
-        # Prepare metadata for upload
-        metadata = {
-            "title": title,
-            "description": description,
-            "creator": creator,
-            "subject": tags,
-            "source": source,
-            "mediatype": "movies",
-            "collection": "community_video",  # Changed from opensource_movies
-        }
+    # Prepare metadata for upload
+    metadata = {
+        "title": title,
+        "description": description,
+        "creator": creator,
+        "subject": tags,
+        "source": source,
+        "mediatype": "movies",
+        "collection": "community_video",  # Changed from opensource_movies
+    }
 
-        return metadata
-    except Exception as e:
-        logger.error(f"Error extracting metadata: {e}")
-        # Return minimal metadata if extraction fails
-        return {
-            "title": "Unknown Video",
-            "source": url,
-            "mediatype": "movies",
-            "collection": "community_video",  # Changed from opensource_movies
-        }
+    return metadata
 
 
 def upload(video_file: Path, info_file: Path, url: str) -> bool:
@@ -128,11 +115,7 @@ def upload(video_file: Path, info_file: Path, url: str) -> bool:
     except ImportError:
         logger.error("internetarchive module not available")
         notify("internetarchive module missing - run 'yt-mpv install'")
-        return False
-    except Exception as e:
-        logger.error(f"Upload error: {e}")
-        notify(f"Upload failed: {str(e)}")
-        return False
+        raise
 
 
 def configure() -> bool:
@@ -162,7 +145,4 @@ def configure() -> bool:
         return True
     except ImportError:
         logger.error("internetarchive library not available")
-        return False
-    except Exception as e:
-        logger.error(f"Failed to configure Internet Archive: {e}")
         return False

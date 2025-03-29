@@ -3,8 +3,6 @@ Video downloading functionality using yt-dlp
 """
 
 import logging
-import os
-import shutil
 import subprocess
 from pathlib import Path
 
@@ -45,87 +43,61 @@ def get_filenames(url: str, dl_dir: Path, venv_bin: Path) -> tuple[Path, Path]:
 
 def download(url: str, dl_dir: Path, venv_bin: Path) -> tuple[Path, Path] | None:
     """Download video using yt-dlp and return paths to video and info files."""
-    try:
-        # Get the expected filenames from yt-dlp
-        video_file, info_file = get_filenames(url, dl_dir, venv_bin)
+    # Get the expected filenames from yt-dlp
+    video_file, info_file = get_filenames(url, dl_dir, venv_bin)
 
-        # Define output pattern to use the same name pattern
-        output_pattern = str(video_file.with_suffix(".%(ext)s"))
+    # Define output pattern to use the same name pattern
+    output_pattern = str(video_file.with_suffix(".%(ext)s"))
 
-        # Use the best available format
-        logger.info("Downloading best available format")
+    # Use the best available format
+    logger.info("Downloading best available format")
 
-        cmd = [
-            str(venv_bin / "yt-dlp"),
-            "-f",
-            "b[ext=mp4]/b",  # Best mp4 format, fallback to best format
-            "--no-check-certificate",
-            "--write-info-json",
-            "--print",
-            "filename",
-            "-v",
-            "--no-part",
-            "--force-overwrites",
-            "-o",
-            output_pattern,
-            url,
-        ]
+    cmd = [
+        str(venv_bin / "yt-dlp"),
+        "-f",
+        "b[ext=mp4]/b",  # Best mp4 format, fallback to best format
+        "--no-check-certificate",
+        "--write-info-json",
+        "--print",
+        "filename",
+        "-v",
+        "--no-part",
+        "--force-overwrites",
+        "-o",
+        output_pattern,
+        url,
+    ]
 
-        return_code, stdout, stderr = run_command(cmd, check=False)
+    return_code, stdout, stderr = run_command(cmd, check=False)
 
-        if return_code == 0:
-            # Check if the file exists with the expected name
+    if return_code == 0:
+        # Check if the file exists with the expected name
+        if video_file.exists() and info_file.exists():
+            return video_file, info_file
+
+        # If the file extension is different than expected, find the actual file
+        potential_files = list(dl_dir.glob(f"{video_file.stem}.*"))
+        potential_files = [f for f in potential_files if f.suffix != ".info.json"]
+        if potential_files:
+            video_file = potential_files[0]
+            info_file = video_file.with_suffix(".info.json")
             if video_file.exists() and info_file.exists():
                 return video_file, info_file
 
-            # If the file extension is different than expected, find the actual file
-            potential_files = list(dl_dir.glob(f"{video_file.stem}.*"))
-            potential_files = [f for f in potential_files if f.suffix != ".info.json"]
-            if potential_files:
-                video_file = potential_files[0]
-                info_file = video_file.with_suffix(".info.json")
-                if video_file.exists() and info_file.exists():
-                    return video_file, info_file
-
-        # If download failed
-        logger.error(f"Failed to download video: {stderr}")
-        notify("Download failed - yt-dlp error")
-        return None
-
-    except Exception as e:
-        logger.error(f"Download error: {e}")
-        notify("Download failed - unexpected error")
-        return None
+    # If download failed
+    logger.error(f"Failed to download video: {stderr}")
+    notify("Download failed - yt-dlp error")
+    return None
 
 
 def update(venv_dir: Path, venv_bin: Path) -> bool:
     """Update yt-dlp using uv if available."""
-    try:
-        # Prepare environment with venv
-        env = os.environ.copy()
-        env["VIRTUAL_ENV"] = str(venv_dir)
-        env["PATH"] = f"{venv_bin}:{env.get('PATH', '')}"
+    # Prepare environment with venv
+    logger.info("Updating yt-dlp using uv in venv")
+    cmd = ["uv", "pip", "install", "--upgrade", "yt-dlp"]
+    run_command(cmd, check=False)
 
-        # First try to use uv if available in the venv
-        uv_path = venv_bin / "uv"
-        if uv_path.exists():
-            logger.info("Updating yt-dlp using uv in venv")
-            cmd = [str(uv_path), "pip", "install", "--upgrade", "yt-dlp"]
-            run_command(cmd, check=False, env=env)
-        # Then try system uv
-        elif shutil.which("uv"):
-            logger.info("Updating yt-dlp using system uv")
-            cmd = ["uv", "pip", "install", "--upgrade", "yt-dlp"]
-            run_command(cmd, check=False, env=env)
-        else:
-            # Fall back to pip
-            logger.info("Updating yt-dlp using pip")
-            cmd = [str(venv_bin / "pip"), "install", "--upgrade", "yt-dlp"]
-            run_command(cmd, check=False, env=env)
-        return True
-    except Exception as e:
-        logger.warning(f"Failed to update yt-dlp: {e}")
-        return False
+    return True
 
 
 def archive_url(url: str, dl_dir: Path, venv_bin: Path) -> bool:

@@ -53,29 +53,25 @@ def play(url: str, additional_args: list = None) -> bool:
 
 def update_yt_dlp(venv_dir: Path, venv_bin: Path) -> bool:
     """Update yt-dlp using uv if available."""
-    try:
-        # Prepare environment with venv
-        env = os.environ.copy()
-        env["VIRTUAL_ENV"] = str(venv_dir)
-        env["PATH"] = f"{venv_bin}:{env.get('PATH', '')}"
+    # Prepare environment with venv
+    env = os.environ.copy()
+    env["VIRTUAL_ENV"] = str(venv_dir)
+    env["PATH"] = f"{venv_bin}:{env.get('PATH', '')}"
 
-        # First try to use uv if available in the venv
-        uv_path = venv_bin / "uv"
-        if uv_path.exists():
-            logger.info("Updating yt-dlp using uv in venv")
-            cmd = [str(uv_path), "pip", "install", "--upgrade", "yt-dlp"]
-            run_command(cmd, check=False, env=env)
-        # Then try system uv
-        elif shutil.which("uv"):
-            logger.info("Updating yt-dlp using system uv")
-            cmd = ["uv", "pip", "install", "--upgrade", "yt-dlp"]
-            run_command(cmd, check=False, env=env)
-        else:
-            # Fall back to pip
-            logger.info("Updating yt-dlp using pip")
-            cmd = [str(venv_bin / "pip"), "install", "--upgrade", "yt-dlp"]
-            run_command(cmd, check=False, env=env)
-        return True
-    except Exception as e:
-        logger.warning(f"Failed to update yt-dlp: {e}")
-        return False
+    # First try to use uv if available in the venv
+    uv_path = venv_bin / "uv"
+    if uv_path.exists():
+        logger.info("Updating yt-dlp using uv in venv")
+        cmd = [str(uv_path), "pip", "install", "--upgrade", "yt-dlp"]
+        run_command(cmd, check=False, env=env)
+    # Then try system uv
+    elif shutil.which("uv"):
+        logger.info("Updating yt-dlp using system uv")
+        cmd = ["uv", "pip", "install", "--upgrade", "yt-dlp"]
+        run_command(cmd, check=False, env=env)
+    else:
+        # Fall back to pip
+        logger.info("Updating yt-dlp using pip")
+        cmd = [str(venv_bin / "pip"), "install", "--upgrade", "yt-dlp"]
+        run_command(cmd, check=False, env=env)
+    return True

@@ -47,32 +47,27 @@ def clear() -> tuple[int, int]:
     """
     cache_dir = DL_DIR
 
-    try:
-        # Get a list of files (not directories)
-        files = [f for f in cache_dir.iterdir() if f.is_file()]
+    # Get a list of files (not directories)
+    files = [f for f in cache_dir.iterdir() if f.is_file()]
 
-        files_deleted = 0
-        bytes_freed = 0
+    files_deleted = 0
+    bytes_freed = 0
 
-        # Remove each file
-        for file_path in files:
-            try:
-                file_size = file_path.stat().st_size
-                file_path.unlink()
-                files_deleted += 1
-                bytes_freed += file_size
-                logger.debug(f"Removed cache file: {file_path}")
-            except OSError as e:
-                logger.error(f"Failed to remove file {file_path}: {e}")
+    # Remove each file
+    for file_path in files:
+        try:
+            file_size = file_path.stat().st_size
+            file_path.unlink()
+            files_deleted += 1
+            bytes_freed += file_size
+            logger.debug(f"Removed cache file: {file_path}")
+        except OSError as e:
+            logger.error(f"Failed to remove file {file_path}: {e}")
 
-        logger.info(
-            f"Cleared {files_deleted} files ({bytes_freed / 1048576:.2f} MB) from cache"
-        )
-        return files_deleted, bytes_freed
-
-    except Exception as e:
-        logger.error(f"Failed to clear cache: {e}")
-        return 0, 0
+    logger.info(
+        f"Cleared {files_deleted} files ({bytes_freed / 1048576:.2f} MB) from cache"
+    )
+    return files_deleted, bytes_freed
 
 
 def stats() -> tuple[int, int, list[tuple[Path, float]]]:
@@ -89,30 +84,25 @@ def stats() -> tuple[int, int, list[tuple[Path, float]]]:
     files_info = []
     total_size = 0
 
-    try:
-        # Get all files in cache directory
-        for file_path in cache_dir.iterdir():
-            if file_path.is_file():
-                try:
-                    stat = file_path.stat()
-                    size = stat.st_size
-                    mtime = stat.st_mtime
-                    age_days = (now - mtime) / (24 * 60 * 60)
+    # Get all files in cache directory
+    for file_path in cache_dir.iterdir():
+        if file_path.is_file():
+            try:
+                stat = file_path.stat()
+                size = stat.st_size
+                mtime = stat.st_mtime
+                age_days = (now - mtime) / (24 * 60 * 60)
 
-                    files_info.append((file_path, age_days))
-                    total_size += size
-                except OSError:
-                    # Skip files with access issues
-                    pass
+                files_info.append((file_path, age_days))
+                total_size += size
+            except OSError:
+                # Skip files with access issues
+                pass
 
-        # Sort by age (oldest first)
-        files_info.sort(key=lambda x: x[1], reverse=True)
+    # Sort by age (oldest first)
+    files_info.sort(key=lambda x: x[1], reverse=True)
 
-        return len(files_info), total_size, files_info
-
-    except Exception as e:
-        logger.error(f"Failed to get cache stats: {e}")
-        return 0, 0, []
+    return len(files_info), total_size, files_info
 
 
 def summary(max_files: int = 5) -> str:

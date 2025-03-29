@@ -44,11 +44,8 @@ def install(prefix=None):
     # Create virtualenv using current Python interpreter
     if not (venv_dir / "bin" / "python").exists():
         print(f"Creating virtualenv at {venv_dir}")
-        try:
-            run_command([sys.executable, "-m", "venv", str(venv_dir)])
-        except Exception as e:
-            print(f"Failed to create virtualenv: {e}")
-            return False
+
+        run_command([sys.executable, "-m", "venv", str(venv_dir)])
 
     # Get dependencies
     venv_pip = venv_dir / "bin" / "pip"
@@ -59,26 +56,21 @@ def install(prefix=None):
     env["PATH"] = f"{venv_dir}/bin:{env.get('PATH', '')}"
 
     # Install core dependencies
+    run_command([str(venv_pip), "install", "-U", "pip"], env=env)
+    run_command(
+        [str(venv_pip), "install", "-U", "yt-dlp", "internetarchive", "uv"],
+        env=env,
+    )
+
+    # Try to use freeze_one for deterministic deps if available
     try:
-        run_command([str(venv_pip), "install", "-U", "pip"], env=env)
-        run_command(
-            [str(venv_pip), "install", "-U", "yt-dlp", "internetarchive", "uv"],
-            env=env,
-        )
+        from freeze_one import freeze_one
 
-        # Try to use freeze_one for deterministic deps if available
-        try:
-            from freeze_one import freeze_one
-
-            frozen_deps = freeze_one("yt_mpv")
-            run_command([str(venv_pip), "install", frozen_deps], env=env)
-        except (ImportError, AttributeError):
-            # Fall back to installing the package directly
-            run_command([str(venv_pip), "install", "-e", "."], env=env)
-
-    except Exception as e:
-        print(f"Failed to install dependencies: {e}")
-        return False
+        frozen_deps = freeze_one("yt_mpv")
+        run_command([str(venv_pip), "install", frozen_deps], env=env)
+    except (ImportError, AttributeError):
+        # Fall back to installing the package directly
+        run_command([str(venv_pip), "install", "-e", "."], env=env)
 
     # Write launcher script
     launcher_content = f"""#!/bin/bash
@@ -88,14 +80,10 @@ def install(prefix=None):
 source "{venv_dir}/bin/activate"
 python -m yt_mpv launch "$@"
 """
-    try:
-        with open(launcher_path, "w") as f:
-            f.write(launcher_content)
-        launcher_path.chmod(0o755)  # Make executable
-        print(f"Created launcher at {launcher_path}")
-    except Exception as e:
-        print(f"Failed to create launcher script: {e}")
-        return False
+    with open(launcher_path, "w") as f:
+        f.write(launcher_content)
+    launcher_path.chmod(0o755)  # Make executable
+    print(f"Created launcher at {launcher_path}")
 
     # Setup desktop file
     if not setup_desktop_entry(
