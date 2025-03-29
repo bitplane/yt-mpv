@@ -3,7 +3,7 @@
 		pre-commit update-pre-commit
 
 
-PROJECT_NAME := mpv-ulp
+PROJECT_NAME := yt-mpv
 
 
 all: dev coverage  ## builds everything

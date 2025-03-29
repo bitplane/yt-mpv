@@ -30,7 +30,7 @@ dev = [
 
 # Add CLI entry point
 [project.scripts]
-yt-mpv = "yt_mpv.cli:main"
+yt-mpv = "yt_mpv.cli.main:main"
 
 [build-system]
 build-backend = "flit_core.buildapi"
