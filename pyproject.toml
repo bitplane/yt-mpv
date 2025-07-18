@@ -1,7 +1,7 @@
 [project]
 name = "yt-mpv"
 description = "Play videos in MPV, while archiving them on archive.org"
-version = "0.2.1"
+version = "0.2.2"
 readme = "README.md"
 authors = [
     { name = "Gareth Davidson", email = "gaz@bitplane.net" }

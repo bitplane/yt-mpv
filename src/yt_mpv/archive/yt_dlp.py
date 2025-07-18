@@ -24,6 +24,8 @@ def get_filenames(url: str, dl_dir: Path, venv_bin: Path) -> tuple[Path, Path]:
             str(venv_bin / "yt-dlp"),
             "--print",
             "filename",
+            "--cookies-from-browser",
+            "firefox",  # or "chrome", "chromium", "edge", "safari"
             "-o",
             output_pattern,
             "--skip-download",
@@ -51,6 +53,8 @@ def download(url: str, dl_dir: Path, venv_bin: Path) -> tuple[Path, Path] | None
     cmd = [
         str(venv_bin / "yt-dlp"),
         "--write-info-json",
+        "--cookies-from-browser",
+        "firefox",  # or "chrome", "chromium", "edge", "safari"
         "-o",
         output_pattern,
         url,

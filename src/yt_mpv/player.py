@@ -27,7 +27,12 @@ def play(url: str, additional_args: list = None) -> bool:
         return False
 
     # Build mpv command
-    cmd = ["mpv", "--ytdl=yes", f"--term-status-msg=Playing: {url}"]
+    cmd = [
+        "mpv",
+        "--ytdl=yes",
+        f"--term-status-msg=Playing: {url}",
+        "--ytdl-raw-options=cookies-from-browser=firefox",
+    ]
 
     # Add additional args if provided
     if additional_args:
