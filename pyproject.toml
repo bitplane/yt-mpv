@@ -25,7 +25,8 @@ dev = [
     "coverage",
     "pytest-cov",
     "build",
-    "twine"
+    "twine",
+    "pydoc-markdown"
 ]
 
 # Add CLI entry point

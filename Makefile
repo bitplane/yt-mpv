@@ -1,6 +1,6 @@
 # the things that don't have output files or run every time
 .PHONY: help all install test dev coverage clean \
-		pre-commit update-pre-commit
+		pre-commit update-pre-commit docs
 
 
 PROJECT_NAME := yt-mpv
@@ -18,7 +18,8 @@ test: .venv/.installed-dev  ## run the project's tests
 coverage: .venv/.installed-dev scripts/coverage.sh  ## build the html coverage report
 	scripts/coverage.sh $(PROJECT_NAME)
 
-docs: .docs/index.html ## build the documentation
+docs: .venv/.installed-dev scripts/docs.sh docs/index.md README.md pyproject.toml ## build the documentation
+	scripts/docs.sh
 
 clean:  ## delete caches and the venv
 	scripts/clean.sh
@@ -28,8 +29,8 @@ pre-commit: .git/hooks/pre-commit  ## install pre-commit into the git repo
 update-pre-commit: scripts/update-pre-commit.sh  ## autoupdate pre-commit
 	scripts/update-pre-commit.sh
 
-dist: scripts/dist.sh ## build the distributable files
-	scripts/dist.sh $(PROJECT_NAME)
+dist: scripts/dist.sh pyproject.toml ## build the distributable files
+	scripts/dist.sh
 
 release: scripts/release.sh ## publish to pypi
 	scripts/release.sh $(PROJECT_NAME)
