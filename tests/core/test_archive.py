@@ -6,7 +6,7 @@ import json
 
 import pytest
 
-from yt_mpv.core.archive import extract_metadata
+from yt_mpv.archive.archive_org import prepare_metadata
 
 
 @pytest.fixture
@@ -27,10 +27,10 @@ def sample_info_file(tmp_path):
     return info_file
 
 
-def test_extract_metadata(sample_info_file):
+def test_prepare_metadata(sample_info_file):
     """Test extracting metadata from an info file."""
     url = "https://www.youtube.com/watch?v=test123"
-    metadata = extract_metadata(sample_info_file, url)
+    metadata = prepare_metadata(sample_info_file, url)
 
     # Check that metadata contains expected fields
     assert metadata["title"] == "Test Video"
@@ -39,10 +39,9 @@ def test_extract_metadata(sample_info_file):
     assert "test" in metadata["subject"]
     assert metadata["source"] == "https://www.youtube.com/watch?v=test123"
     assert metadata["mediatype"] == "movies"
-    assert metadata["collection"] == "opensource_movies"
 
 
-def test_extract_metadata_missing_fields(tmp_path):
+def test_prepare_metadata_missing_fields(tmp_path):
     """Test extracting metadata with missing fields."""
     # Create minimal info JSON
     info_data = {"title": "Minimal Video"}
@@ -52,7 +51,7 @@ def test_extract_metadata_missing_fields(tmp_path):
         json.dump(info_data, f)
 
     url = "https://example.com/video"
-    metadata = extract_metadata(info_file, url)
+    metadata = prepare_metadata(info_file, url)
 
     # Check that metadata has default values for missing fields
     assert metadata["title"] == "Minimal Video"

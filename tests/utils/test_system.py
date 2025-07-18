@@ -5,7 +5,7 @@ Tests for the system utilities.
 import hashlib
 from unittest.mock import patch
 
-from yt_mpv.utils.system import generate_archive_id, run_command
+from yt_mpv.utils.fs import generate_archive_id, run_command
 
 
 def test_generate_archive_id():
@@ -30,7 +30,7 @@ def test_generate_archive_id():
 
     # Test default username (mocked to avoid using actual login)
     # The patching needs to happen at the module level since that's where getlogin is used
-    with patch("yt_mpv.utils.system.os.getlogin", return_value="defaultuser"):
+    with patch("yt_mpv.utils.fs.os.getlogin", return_value="defaultuser"):
         archive_id3 = generate_archive_id(url)
         assert "defaultuser" in archive_id3
 

@@ -8,11 +8,10 @@ import time
 import pytest
 
 from yt_mpv.utils.cache import (
-    clean_all_cache,
-    cleanup_cache_files,
-    format_cache_info,
-    get_cache_info,
-    purge_cache,
+    clear,
+    remove,
+    stats,
+    summary,
 )
 
 
@@ -34,8 +33,8 @@ def temp_cache_dir(tmp_path):
     return cache_dir
 
 
-def test_cleanup_cache_files(tmp_path):
-    """Test cleanup_cache_files removes the specified files."""
+def test_remove(tmp_path):
+    """Test remove removes the specified files."""
     # Create test files
     video_file = tmp_path / "test_video.mp4"
     info_file = tmp_path / "test_info.json"
@@ -48,7 +47,7 @@ def test_cleanup_cache_files(tmp_path):
     assert info_file.exists()
 
     # Clean up files
-    result = cleanup_cache_files(video_file, info_file)
+    result = remove(video_file, info_file)
 
     # Check result
     assert result is True
@@ -56,23 +55,24 @@ def test_cleanup_cache_files(tmp_path):
     assert not info_file.exists()
 
 
-def test_cleanup_cache_files_missing(tmp_path):
-    """Test cleanup_cache_files handles missing files gracefully."""
+def test_remove_missing(tmp_path):
+    """Test remove handles missing files gracefully."""
     # Create paths but don't create the files
     video_file = tmp_path / "nonexistent_video.mp4"
     info_file = tmp_path / "nonexistent_info.json"
 
     # Clean up non-existent files
-    result = cleanup_cache_files(video_file, info_file)
+    result = remove(video_file, info_file)
 
     # Should still return True since nothing failed
     assert result is True
 
 
-def test_get_cache_info(temp_cache_dir):
-    """Test get_cache_info returns correct information."""
-    # Pass the temp directory directly instead of mocking Path.home
-    file_count, total_size, file_details = get_cache_info(cache_dir=temp_cache_dir)
+def test_stats(temp_cache_dir, monkeypatch):
+    """Test stats returns correct information."""
+    # Mock DL_DIR to use our temp directory
+    monkeypatch.setattr("yt_mpv.utils.cache.DL_DIR", temp_cache_dir)
+    file_count, total_size, file_details = stats()
 
     # Verify results
     assert file_count == 5
@@ -84,35 +84,11 @@ def test_get_cache_info(temp_cache_dir):
     assert ages == sorted(ages, reverse=True)
 
 
-def test_purge_cache(temp_cache_dir):
-    """Test purge_cache removes files older than specified age."""
-    # Files 0, 1 are newer than 2 days
-    # Files 2, 3, 4 are older than 2 days
-    files_before = list(temp_cache_dir.iterdir())
-    assert len(files_before) == 5
+def test_clear(temp_cache_dir, monkeypatch):
+    """Test clear removes all files."""
+    # Mock DL_DIR to use our temp directory
+    monkeypatch.setattr("yt_mpv.utils.cache.DL_DIR", temp_cache_dir)
 
-    # Make a copy of file stats to verify later
-    file_stats = {}
-    for file in files_before:
-        mtime = file.stat().st_mtime
-        age_days = (time.time() - mtime) / (24 * 60 * 60)
-        file_stats[file.name] = age_days
-
-    # Purge files older than 2 days
-    files_deleted, bytes_freed = purge_cache(cache_dir=temp_cache_dir, max_age_days=2)
-
-    # Check results
-    expected_deleted = sum(1 for age in file_stats.values() if age > 2)
-    assert files_deleted == expected_deleted
-    assert bytes_freed > 0
-
-    files_after = list(temp_cache_dir.iterdir())
-    expected_remaining = sum(1 for age in file_stats.values() if age <= 2)
-    assert len(files_after) == expected_remaining
-
-
-def test_clean_all_cache(temp_cache_dir):
-    """Test clean_all_cache removes all files."""
     # Verify initial state
     files_before = list(temp_cache_dir.iterdir())
     assert len(files_before) == 5
@@ -122,7 +98,7 @@ def test_clean_all_cache(temp_cache_dir):
     assert total_size > 0
 
     # Remove all files
-    files_deleted, bytes_freed = clean_all_cache(cache_dir=temp_cache_dir)
+    files_deleted, bytes_freed = clear()
 
     # Check results
     assert files_deleted == 5
@@ -133,10 +109,13 @@ def test_clean_all_cache(temp_cache_dir):
     assert len(files_after) == 0
 
 
-def test_format_cache_info(temp_cache_dir):
-    """Test format_cache_info returns properly formatted info."""
+def test_summary(temp_cache_dir, monkeypatch):
+    """Test summary returns properly formatted info."""
+    # Mock DL_DIR to use our temp directory
+    monkeypatch.setattr("yt_mpv.utils.cache.DL_DIR", temp_cache_dir)
+
     # Get formatted info
-    formatted_info = format_cache_info(cache_dir=temp_cache_dir, max_files=3)
+    formatted_info = summary(max_files=3)
 
     # Check output format
     assert "Cache information:" in formatted_info
