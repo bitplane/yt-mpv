@@ -8,8 +8,8 @@ else
     PIP="python3 -m pip"
 fi
 
-$PIP install -e .[dev]
+$PIP install .
 
-echo "Installed in dev mode"
-touch .venv/.installed-dev
-rm .venv/.installed 2>/dev/null || true
+echo Installed normally
+touch .venv/.installed
+rm .venv/.installed-dev 2>/dev/null || true

@@ -1,5 +1,5 @@
 # the things that don't have output files or run every time
-.PHONY: help all test dev coverage clean \
+.PHONY: help all install test dev coverage clean \
 		pre-commit update-pre-commit
 
 
@@ -7,6 +7,8 @@ PROJECT_NAME := yt-mpv
 
 
 all: dev coverage  ## builds everything
+
+install: .venv/.installed  ## installs the venv and the project packages
 
 dev: .venv/.installed-dev pre-commit  ## prepare local repo and venv for dev
 
@@ -26,7 +28,7 @@ pre-commit: .git/hooks/pre-commit  ## install pre-commit into the git repo
 update-pre-commit: scripts/update-pre-commit.sh  ## autoupdate pre-commit
 	scripts/update-pre-commit.sh
 
-dist: scripts/dist.sh pyproject.toml ## build the distributable files
+dist: scripts/dist.sh ## build the distributable files
 	scripts/dist.sh $(PROJECT_NAME)
 
 release: scripts/release.sh ## publish to pypi
