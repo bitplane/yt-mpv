@@ -31,12 +31,12 @@ def get_js():
     """Get the JavaScript bookmarklet code."""
     play_only_js = (
         "javascript:(function(){var originalUrl = encodeURIComponent(window.location.href); "
-        "window.location.href = 'x-yt-mpv:/?url=' + originalUrl + '&archive=0';})()"
+        "window.location.href = 'x-yt-mpv://?url=' + originalUrl + '&archive=0';})()"
     )
 
     play_archive_js = (
         "javascript:(function(){var originalUrl = encodeURIComponent(window.location.href); "
-        "window.location.href = 'x-yt-mpv:/?url=' + originalUrl + '&archive=1';})()"
+        "window.location.href = 'x-yt-mpv://?url=' + originalUrl + '&archive=1';})()"
     )
 
     return (play_only_js, play_archive_js)
