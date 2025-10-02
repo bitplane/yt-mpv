@@ -33,10 +33,24 @@ def run_command(
         return 1, "", str(e)
 
 
-def generate_archive_id(url: str, username: str = None) -> str:
-    """Generate a unique Archive.org identifier for a video URL."""
-    # Get current date in YYYY_MM_DD format
-    date_str = datetime.now().strftime("%Y_%m_%d")
+def generate_archive_id(url: str, upload_date: str = None) -> str:
+    """Generate a unique Archive.org identifier for a video URL.
+
+    Args:
+        url: The video URL
+        upload_date: Original upload date in YYYYMMDD or YYYY_MM_DD format
+    """
+    # Format date as YYYY_MM_DD
+    if upload_date:
+        # Handle YYYYMMDD format
+        if len(upload_date) == 8 and upload_date.isdigit():
+            date_str = f"{upload_date[:4]}_{upload_date[4:6]}_{upload_date[6:8]}"
+        else:
+            # Already in YYYY_MM_DD or similar format
+            date_str = upload_date.replace("-", "_")
+    else:
+        # Fallback to current date if no upload date available
+        date_str = datetime.now().strftime("%Y_%m_%d")
 
     # Get 8 chars of MD5 hash for uniqueness
     url_hash = hashlib.md5(url.encode()).hexdigest()[:8]

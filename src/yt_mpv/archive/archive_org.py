@@ -4,7 +4,6 @@ Internet Archive functionality for yt-mpv
 
 import json
 import logging
-import os
 from pathlib import Path
 
 from yt_mpv.utils.fs import generate_archive_id
@@ -14,12 +13,13 @@ from yt_mpv.utils.notify import notify
 logger = logging.getLogger("yt-mpv")
 
 
-def is_archived(url: str) -> str | None:
+def is_archived(url: str, upload_date: str = None) -> str | None:
     """
     Check if a URL is already archived in archive.org.
 
     Args:
         url: The URL to check
+        upload_date: Original upload date in YYYYMMDD format
 
     Returns:
         str: The archive.org URL if found, otherwise None
@@ -28,7 +28,7 @@ def is_archived(url: str) -> str | None:
         import internetarchive
 
         # Generate the identifier that would have been used
-        identifier = generate_archive_id(url)
+        identifier = generate_archive_id(url, upload_date)
 
         # Check if item exists
         item = internetarchive.get_item(identifier)
@@ -76,9 +76,13 @@ def upload(video_file: Path, info_file: Path, url: str) -> bool:
         # Extract metadata from info.json
         metadata = prepare_metadata(info_file, url)
 
-        # Generate archive identifier
-        username = os.getlogin()
-        identifier = generate_archive_id(url, username)
+        # Load info to get upload date
+        with open(info_file, "r") as f:
+            info_data = json.load(f)
+        upload_date = info_data.get("upload_date")
+
+        # Generate archive identifier with original upload date
+        identifier = generate_archive_id(url, upload_date)
 
         # Check if item already exists
         item = internetarchive.get_item(identifier)
