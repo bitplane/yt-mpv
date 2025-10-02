@@ -57,17 +57,24 @@ def download(url: str, dl_dir: Path, venv_bin: Path) -> tuple[Path, Path] | None
         "firefox",  # or "chrome", "chromium", "edge", "safari"
         "-o",
         output_pattern,
+        "--print",
+        "after_move:filepath",
         url,
     ]
 
     try:
-        # Run yt-dlp
+        # Run yt-dlp and capture the output filename
         logger.info(f"Downloading video: {url}")
-        subprocess.run(cmd, check=True)
+        result = subprocess.run(cmd, check=True, capture_output=True, text=True)
 
-        # Find the downloaded files
-        for video_file in dl_dir.glob("yt-mpv-*"):
-            if not video_file.name.endswith(".info.json"):
+        # Parse the output to get the actual downloaded file path
+        output_lines = result.stdout.strip().split("\n")
+        if output_lines:
+            # The last line should be the video file path from --print after_move:filepath
+            video_file_path = output_lines[-1].strip()
+            video_file = Path(video_file_path)
+
+            if video_file.exists():
                 info_file = video_file.with_suffix(".info.json")
                 if info_file.exists():
                     logger.info(f"Downloaded successfully: {video_file.name}")
