@@ -3,36 +3,39 @@ Tests for the system utilities.
 """
 
 import hashlib
-from unittest.mock import patch
+import re
 
 from yt_mpv.utils.fs import generate_archive_id, run_command
 
 
 def test_generate_archive_id():
     """Test archive ID generation for consistency."""
-    # Test with fixed URL and username
+    # Test with fixed URL
     url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-    username = "testuser"
 
     # Generate ID
-    archive_id = generate_archive_id(url, username)
+    archive_id = generate_archive_id(url)
 
-    # Verify format and expected hash
-    url_hash = hashlib.sha1(url.encode()).hexdigest()[:8]
-    expected_id = f"yt-mpv-{username}-{url_hash}"
+    # Verify format: YYYY_MM_DD-url_with_underscores-hash
+    assert re.match(r"^\d{4}_\d{2}_\d{2}-.+-[a-f0-9]{8}$", archive_id)
 
-    assert archive_id == expected_id
+    # Verify hash portion matches MD5
+    url_hash = hashlib.md5(url.encode()).hexdigest()[:8]
+    assert archive_id.endswith(f"-{url_hash}")
 
-    # Test with different URL
+    # Verify URL portion is cleaned
+    assert "www_youtube_com" in archive_id
+    assert "dQw4w9WgXcQ" in archive_id
+
+    # Test with different URL generates different ID
     url2 = "https://www.youtube.com/watch?v=different"
-    archive_id2 = generate_archive_id(url2, username)
+    archive_id2 = generate_archive_id(url2)
     assert archive_id != archive_id2
 
-    # Test default username (mocked to avoid using actual login)
-    # The patching needs to happen at the module level since that's where getlogin is used
-    with patch("yt_mpv.utils.fs.os.getlogin", return_value="defaultuser"):
-        archive_id3 = generate_archive_id(url)
-        assert "defaultuser" in archive_id3
+    # Test length limit (max 80 chars)
+    long_url = "https://www.example.com/" + "a" * 200
+    long_id = generate_archive_id(long_url)
+    assert len(long_id) <= 80
 
 
 def test_run_command():

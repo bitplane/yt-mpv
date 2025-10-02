@@ -104,7 +104,8 @@ def upload(video_file: Path, info_file: Path, url: str) -> bool:
 
         if success:
             logger.info("Upload succeeded")
-            notify(f"Upload succeeded: {identifier}")
+            archive_url = f"https://archive.org/details/{identifier}"
+            notify(f"Upload succeeded: {identifier}", url=archive_url)
             return True
         else:
             logger.error("Upload failed")
