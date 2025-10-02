@@ -2,6 +2,7 @@
 Video downloading functionality using yt-dlp
 """
 
+import json
 import logging
 import subprocess
 from pathlib import Path
@@ -106,21 +107,28 @@ def update(venv_dir: Path, venv_bin: Path) -> bool:
 
 def archive_url(url: str, dl_dir: Path, venv_bin: Path) -> bool:
     """Archive a URL to archive.org."""
-    # First check if already archived
-    archive_url_path = is_archived(url)
-    if archive_url_path:
-        logger.info(f"URL already archived: {archive_url_path}")
-        notify(f"Already archived: {archive_url_path}")
-        return True
-
     try:
-        # Download the video
+        # Download the video first to get metadata including upload date
         logger.info("Downloading video for archiving")
         result = download(url, dl_dir, venv_bin)
         if not result:
             return False
 
         video_file, info_file = result
+
+        # Load info to get upload date
+        with open(info_file, "r") as f:
+            info_data = json.load(f)
+        upload_date = info_data.get("upload_date")
+
+        # Check if already archived (now with proper date)
+        archive_url_path = is_archived(url, upload_date)
+        if archive_url_path:
+            logger.info(f"URL already archived: {archive_url_path}")
+            notify(f"Already archived: {archive_url_path}")
+            # Clean up downloaded files since already archived
+            remove(video_file, info_file)
+            return True
 
         # Upload to Archive.org
         success = upload(video_file, info_file, url)
